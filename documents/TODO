@@ -1,0 +1,24 @@
+Website:
+_
+-| homepage
+
+-| networking
+   -| connect via socket connection
+   -| implement protocol to properly send photo
+   -| implement protocol to properly send live video
+
+-| photo page
+   -| take photo
+   -| save photo
+   -| send/ export photo
+
+-| video page
+   -| live feed
+-| implement calendar of photos to track progress
+
+Python:
+_
+x| take picture
+-| store photo in public directory
+-| store multiple photos in folder
+   -| organize photos by common factor ie. date
