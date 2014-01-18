@@ -3,26 +3,26 @@
     <?php
       
       error_reporting(E_ALL);
-      echo "opening socket.\n";
+      echo "opening socket.<br>";
       $host = "127.0.0.1";
       $port = 5678;
       $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
       if($socket == false) {
-        echo "failed socket creation.\n";
+        echo "failed socket creation.<br>";
       }
-      echo "socket created.\n";
+      echo "socket created.<br>";
       $result = socket_connect($socket, $host, $port);
       if(result == false){
-        echo"failed connection to server.\n";
+        echo"failed connection to server.<br>";
       }   
-      echo "connection made.\n";
+      echo "connection made.<br>";
 
-      $out = "test";
+      $out = "1";
       socket_write($socket, $out, strlen($out));
-      echo "data sent\n.";
+      echo "data sent.<br>";
 
       fclose($socket);      
-      echo "socket closed.\n";
+      echo "socket closed.<br>";
     ?>
   </body>
 </html>
