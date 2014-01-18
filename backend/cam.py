@@ -24,7 +24,19 @@ def displayVideo():
         c = cv.WaitKey(10) 
 
 def runServer():
-    print("Camera Server is live.")
+    import socket
+
+    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket.bind(('localhost', 5678))
+    serversocket.listen(5)
+    print 'waiting...'
+    
+    while 1:
+        conn, addr = serversocket.accept()
+        print "connection made by", addr
+        #read from client...
+        data = conn.recv(1024)
+        print data
 
 def printOptions():
     input = raw_input("1) run server\n2) take photo\n3) display video: ")
