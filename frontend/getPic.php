@@ -17,8 +17,8 @@
       }   
       echo "connection made.\n";
 
-      $out = "test\n";
-      socket_write($socket, $in, strlen($in));
+      $out = "test";
+      socket_write($socket, $out, strlen($out));
       echo "data sent\n.";
 
       fclose($socket);      

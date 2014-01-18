@@ -31,12 +31,12 @@ def runServer():
     serversocket.listen(5)
     print 'waiting...'
     
-    while 1:
-        conn, addr = serversocket.accept()
-        print "connection made by", addr
-        #read from client...
-        data = conn.recv(1024)
-        print data
+    conn, addr = serversocket.accept()
+    print "connection made by", addr
+    #read from client...
+    data = "brent" 
+    data = data, conn.recv(1024)
+    print "in: ", data
 
 def printOptions():
     input = raw_input("1) run server\n2) take photo\n3) display video: ")
