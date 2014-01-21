@@ -1,32 +1,36 @@
-<html> 
+<html>
+  <style> 
+    h1{ font-size:72; text-align: center; }
+    #banner{ background-image:  <a href="myfile.htm"><img src="IMG-5707.jpeg"></a>; }
+  </style>
   <body>
-    <br><br><br>
+    <div id = "banner">
+      <h1>AQUARICAM!</h1>
+    </div>
     <?php
-      $name = "Brent";
-      echo "<center>Welcome to $name's AquaCam!</center>";
-      echo "<br><center>What would you like to do?</center>";
+      echo "<center>Please select an Aquarium to view:</center>";
+
     ?>
-    
-    <br> <br> <br> <br> <center>
-    
-    <!-- BUTTONS -->    
-    <form> 
-      <input 
-        type = "button" 
-        value = "Get Pic of Tank"
-        onClick = "window.location.href='./getPic.php'"
-      >
+    <!-- The form Value's represent the user. There are TWO users,
+         Riley (0), and Brent(1).
+      -->
+    <form action="user.php" 
+	  method="post">
+      <input type="image" 
+	     src="IMG_5733.jpeg"
+	     height="42"
+	     width="82"
+      />
+      <input type="hidden" name="Language" value="0">
     </form>
 
-    <form> 
-      <input 
-        type = "button" 
-        value = "Live Video of Tank!"
-        onClick = "window.location.href='./getVid.php'"
-      >
+    <form action="user.php" 
+	  method="post">
+      <input type="image" 
+	     src="IMG_5733.jpeg" 
+      />
+      <input type="hidden" name="Language" value="1">
     </form>
-
-    </center>
 
   </body>
 </html>
