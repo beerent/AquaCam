@@ -1,13 +1,22 @@
+<?php session_start(); ?>
 <html> 
   <body>
-    <br><br><br>
+    <center>
+    <?php     
+       if ($_POST["user"] == 1){
+         $_SESSION['name'] = "Brent";
+         $_SESSION['ip'] = "192.168.1.141";
+         $_SESSION['port'] = 5678;
+         $userPORT = 5678;
 
-      Welcome <?php echo $_POST["Language"]; ?><br>
-      Your email address is: <?php echo $_POST["email"]; ?>
+       } else if ($_POST["user"] == 0){
+         $_SESSION['name'] = "Riley";
+         $_SESSION['ip'] = "192.168.1.142";
+         $_SESSION['port'] = 5678;
+       }
 
-    
-    <br> <br> <br> <br> <center>
-    
+       echo "You Are Viewing ", $_SESSION['name'], "'s Aquarium.";
+    ?>
     <!-- BUTTONS -->    
     <form> 
       <input 

@@ -1,7 +1,8 @@
 <html>
   <style> 
-    h1{ font-size:72; text-align: center; }
-    
+    h1{font-size:72; text-align: center;}
+    footer{font-size:8; text-align:center;}
+
     #banner{ background-image:  <a href="myfile.htm">
       <img src="IMG-5707.jpeg"></a>; 
     }
@@ -30,7 +31,7 @@
 	     src="IMG_5733.jpeg";
 	     width="20%"
       />
-      <input type="hidden" name="Language" value="0">
+      <input type="hidden" name="user" value="0">
     </form>
     
     Brent's Turtle Tank
@@ -40,8 +41,9 @@
 	     src="IMG_5733.jpeg";
 	     width="20%"
       />
-      <input type="hidden" name="Language" value="1">
+      <input type="hidden" name="user" value="1">
     </form>
-
+    
+    <footer>Brent Ryczak (brentryczak@gmail.com)</footer>
   </body>
 </html>
