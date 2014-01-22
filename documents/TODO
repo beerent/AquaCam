@@ -22,3 +22,12 @@ x| take picture
 -| store photo in public directory
 -| store multiple photos in folder
    -| organize photos by common factor ie. date
+
+Arduino:
+_
+-| Get Module
+-| Order thermometer
+
+Database:
+_
+-| Create Database
