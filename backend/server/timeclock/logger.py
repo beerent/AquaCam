@@ -1,6 +1,19 @@
 from time import gmtime, strftime
 import sys
 
+def get(c):
+    return strftime("%" + c)
+
+def getTimeArray():
+    return [get("H"), get("M"), get("S")]
+
+def getDateArray():
+    return [get("Y"), get("m"), get("d")]
+
+def getTimeString():
+    timeA = getTimeArray()
+    return timeA[0]+" "+timeA[1]+" "+" "+timeA[2]
+
 if len(sys.argv) != 3:
     print "please enter your name!"
     exit(1)
@@ -19,6 +32,9 @@ if sys.argv[2] != "in" and sys.argv[2] != "out":
 str += " " + sys.argv[2] + ": " + strftime("%Y-%m-%d %H:%M:%S")   
 
 with open("clock.txt", "a") as clock:
-    clock.write(str);
+    clock.write(str + "\n");
 
 print"logged " + str
+print getTimeArray()
+print getDateArray()
+print getTimeString()
