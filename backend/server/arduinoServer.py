@@ -51,20 +51,34 @@ def reader():
             return data
     
 #handles the string input from the arduino. Reads the first String 
+
+#arduino ops
 # op 0 = time request
 # op 1 = 
+
+# admin ops
+# op -1 = terminate server
+
 def inputHandler(str):
     if str == None:
         report("no input")
         return 
-    input = list(str)
-    #assuming there are no two digit opcodes
-    op = int(input[0])
-    if op == 0:
-        sender(timeMaster.getTimeString())
-    else:
-        report("no op for: " + op + " in string: " + str)
 
+    input = str.split()
+    #assuming there are no two digit opcodes
+    try:
+        op = int(input[0])
+        if op == 0:
+            sender(timeMaster.getTimeString())
+
+        #admin
+        elif op == 101:
+            exit(0)
+        else:
+            report("no op for: " + input[0] + " in string: " + str)
+
+    except: 
+        report(input[0]  + " is not a valid op code")
 
 #function manages the lights, turning them on or off
 #light corresponds to the specific light, mode corresponds to the 
@@ -102,5 +116,6 @@ def runServer():
 
         inputHandler(reader())
         client.close()
+
 #run the server
 runServer()
