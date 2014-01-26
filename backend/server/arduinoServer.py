@@ -1,4 +1,8 @@
 import timeMaster
+import socket
+
+#globals
+serverSocket = None #start at null
 
 #an easy way to print with the "[SERVER]" prefix.
 def report(str):
@@ -9,29 +13,38 @@ def report(str):
 #waits for connection from arduino hardware on 
 #port 5678
 def setConnection():
-    import socket
+    #from socket import *
+    global serverSocket
+    serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serverSocket.bind(("localhost", 5678))
+    serverSocket.listen(5)
+    report("waiting for connection from arduino...")
+    conn, address = serverSocket.accept()
 
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serversocket.bind(('localhost', 5678))
-    serversocket.listen(5)
-    report('waiting for connection...')
+    report("connected to device.")
     
-    conn, addr = serversocket.accept()
-    report( "connection made by " + addr)
+def sender(str):
+    global serverSocket
+    serverSocket.send(str)
 
-#def sender(str):
-    
-#def reader(str):
+def reader():
+    global serverSocket
+    data = serverSocket.recv(512)
+    report("received: " + data)
+    return data
     
 #handles the string input from the arduino. Reads the first String 
 # op 0 = time request
 # op 1 = 
 def inputHandler(str):
+    if str == None:
+        return 
     input = list(str)
     #assuming there are no two digit opcodes
     op = input[0]
     if op == 0:
-        sender(getTimeString())
+        print("HERE!")
+        #sender(getTimeString())
 
 
 #function manages the lights, turning them on or off
@@ -59,7 +72,7 @@ def runServer():
     setConnection()
 
     while True:
-        handleInput(reader())
+        inputHandler(reader())
 
 #run the server
 runServer()
