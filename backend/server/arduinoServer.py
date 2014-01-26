@@ -34,7 +34,7 @@ def sender(str):
     global client
     global address
     report("sending: " + str)
-    serverSocket.send(str)
+    client.send(str + "\n")
 
 def reader():
     global serverSocket
@@ -44,12 +44,10 @@ def reader():
     while 1:
         data = client.recv(512)
 
+        #wait for a request
         if data:
             report ("received: " + data)
             return data
-        else:
-            report("no data yet...")
-            time.sleep(3)
     
 #handles the string input from the arduino. Reads the first String 
 # op 0 = time request
@@ -62,9 +60,9 @@ def inputHandler(str):
     #assuming there are no two digit opcodes
     op = int(input[0])
     if op == 0:
-        sender(getTimeString())
+        sender(timeMaster.getTimeString())
     else:
-        print("no op for: " + op + " in string: " + str)
+        report("no op for: " + op + " in string: " + str)
 
 
 #function manages the lights, turning them on or off

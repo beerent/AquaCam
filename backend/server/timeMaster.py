@@ -12,7 +12,7 @@ def getDateArray():
 
 def getTimeString():
     timeA = getTimeArray()
-    return timeA[0]+" "+timeA[1]+" "+" "+timeA[2]
+    return timeA[0]+" "+timeA[1]+" "+timeA[2]
 
 def logTime():
     str = sys.argv[1]
