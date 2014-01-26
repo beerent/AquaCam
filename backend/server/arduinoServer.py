@@ -11,23 +11,24 @@ address = None;
 def report(str):
     print("[SERVER] " + str)
 
-
+#null all connections to the Socket
+def nullConn():
+    global serverSocket
+    global client
+    global address
+    serverSocket = None
+    client = None
+    address = None
 #sets the server socket for the server
 #waits for connection from arduino hardware on 
 #port 5678
 def setConnection():
     #from socket import *
     global serverSocket
-    global client
-    global address
 
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverSocket.bind(("localhost", 5678))
     serverSocket.listen(5)
-    report("waiting for connection from arduino...")
-    client, address = serverSocket.accept()
-
-    report("connected to device.")
     
 def sender(str):
     global serverSocket
@@ -87,11 +88,19 @@ def relayManager(pin, mode):
         ob = "LOW"
 
 def runServer():
+    global serverSocket
+    global client
+    global address
+
     setConnection()
 
     while True:
-        inputHandler(reader())
-        break
+        
+        report("waiting for connection from arduino...")
+        client, address = serverSocket.accept()
+        report("connected to device.")
 
+        inputHandler(reader())
+        client.close()
 #run the server
 runServer()
