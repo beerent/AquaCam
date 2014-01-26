@@ -70,10 +70,6 @@ def inputHandler(str):
         op = int(input[0])
         if op == 0:
             sender(timeMaster.getTimeString())
-
-        #admin
-        elif op == 101:
-            exit(0)
         else:
             report("no op for: " + input[0] + " in string: " + str)
 
