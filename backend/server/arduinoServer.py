@@ -19,10 +19,10 @@ def setConnection():
     conn, addr = serversocket.accept()
     report( "connection made by " + addr)
 
-def sender(str):
-
-def reader(str):
-
+#def sender(str):
+    
+#def reader(str):
+    
 #handles the string input from the arduino. Reads the first String 
 # op 0 = time request
 # op 1 = 
@@ -31,7 +31,7 @@ def inputHandler(str):
     #assuming there are no two digit opcodes
     op = input[0]
     if op == 0:
-        sender()
+        sender(getTimeString())
 
 
 #function manages the lights, turning them on or off
@@ -54,7 +54,8 @@ def relayManager(pin, mode):
         ob = "HIGH"
     else:
         ob = "LOW"
-    if i
-    sender(
-}
 
+def runServer():
+    while True:
+        handleInput(reader())
+print timeMaster.getTimeString()
