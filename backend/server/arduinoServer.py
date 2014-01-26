@@ -56,6 +56,10 @@ def relayManager(pin, mode):
         ob = "LOW"
 
 def runServer():
+    setConnection()
+
     while True:
         handleInput(reader())
-print timeMaster.getTimeString()
+
+#run the server
+runServer()
