@@ -26,16 +26,23 @@ def setConnection():
     #from socket import *
     global serverSocket
 
+    host = ''
+    port = 5678
+    addres = (host, port)
+
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSocket.bind(("localhost", 5678))
+    serverSocket.bind((addres))
     serverSocket.listen(5)
+
+    print "Listening for client . . ."
+
     
 def sender(str):
     global serverSocket
     global client
     global address
-    report("sending: " + str)
-    client.send(str + "\n")
+    client.send(str)
+    report("sent: " + str);
 
 def reader():
     global serverSocket
@@ -103,15 +110,24 @@ def runServer():
     global address
 
     setConnection()
-
+    
     while True:
-        
-        report("waiting for connection from arduino...")
         client, address = serverSocket.accept()
-        report("connected to device.")
 
+        print "Connected to client at ", address
         inputHandler(reader())
         client.close()
+
+    #setConnection()
+
+    #while True:
+        
+    #    report("waiting for connection from arduino...")
+    #    client, address = serverSocket.accept()
+    #    report("connected to device.")
+
+    #    inputHandler(reader())
+    #    client.close()
 
 #run the server
 runServer()
