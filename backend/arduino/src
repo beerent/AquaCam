@@ -1,0 +1,139 @@
+#include <SPI.h>
+#include <Ethernet.h>
+
+byte mac[] = {0x90, 0xA2, 0xDA, 0x0E, 0x40, 0x9F};
+byte ip[] = {192, 168, 2, 172};
+IPAddress server(192,168,1,149);
+int port = 5678;
+EthernetClient client;
+int connected;
+
+int relay[2];
+int relayCount;
+
+// on and off times for lights
+int lightOn[2];
+int lightOff[2];
+
+int pin[2];
+
+// function called when Arduino needs to communicate with server
+void connect2server() {
+  Serial.println("connecting to server...");
+  if (client.connect(server, port)) {
+    connected = 1;
+    Serial.println("connected.");
+  } 
+  else {
+    Serial.println("connection failed");
+  }
+}
+
+void sendOut(char str[]){
+  client.println(str); 
+}
+
+// accepts a String pointer, simply reads input from the Server,
+// and modifies the String input (essentially returning a String).
+void readIn(String &input) {
+  delay(1000); //FIX: delay to allow for server to send all of the bytes
+  
+  // if the client has bytes to read from the server
+  if (client.available()) { 
+    while(client.available()!= 0){
+      input += (char)client.read(); 
+    }
+  }
+}
+
+// accepts the current time in military time as two parameters
+// turns on/off any devices that use a relay, if they need
+// to be turned on/off. 
+void relayTimer(int currentTime){
+  int max = 2500;
+  for(int i = 0; i < relayCount; i++){
+    if(((max + currentTime - lightOn[i]) % max) < ((max + lightOff[i] - lightOn[i]) % max)){
+      digitalWrite(pin[i], LOW);
+      Serial.println("pin " + String(i) + " launched");
+    }else{
+      digitalWrite(pin[i], HIGH); 
+    }
+  }
+}
+
+void lightManager(){
+  sendOut("0"); //request for time
+  String t = ""; 
+  readIn(t); //receive time
+  //disconnect, we have the data.
+  client.stop();
+  connected = 0;
+  t.trim();
+  Serial.println("current time = " + t);
+    
+  //convert Strings to ints
+  int time[2];
+    for(int i = 0; i  < 2; i++){
+      if(t.charAt(1) == ' '){
+      time[i] = (int) t.charAt(0); 
+      t = t.substring(2);
+    }else{
+      time[i] = t.substring(0, 2).toInt();
+      t = t.substring(3);
+    } 
+  }
+  int currentTime;
+  
+  if(time[0] == 00){
+    currentTime = 0;
+  } else if(String(time[0]).charAt(0) == '0'){
+    currentTime = ((int) String(time[0]).charAt(1) * 100);
+  }
+  
+  if(String(time[1]).charAt(0) == '0'){
+      currentTime += (int) String(time[1]).charAt(1);
+  } else {
+      currentTime += time[1]; 
+  }
+  
+  //int currentTime = (String(time[0]) + String(time[1])).toInt().trim();
+  Serial.println("sending " + String(currentTime));
+  //check relay timer for lights (op code 'L')
+  relayTimer(currentTime);
+}
+
+void setLightTimes(){
+  lightOn[0] = 1330; lightOff[0] = 2330;
+  lightOn[1] = 1430; lightOff[1] = 2230;
+}
+
+void setup() {
+  Serial.begin(9600);
+  relayCount = 2;
+  setLightTimes();
+  
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println("Failed to configure Ethernet using DHCP");
+    Ethernet.begin(mac, ip);
+  }
+  connected = 0;
+  
+  pin[0] = 22;
+  pinMode(pin[0], OUTPUT);
+  digitalWrite(pin[0], HIGH); //start off (HIGH == off)
+  
+  pin[1] = 23;
+  pinMode(pin[1], OUTPUT);
+  digitalWrite(pin[1], HIGH);
+}
+
+void loop() {
+  
+  //get time from server
+  connect2server();
+  //check time with lights function, requires connection
+  if(connected == 1) lightManager();
+  
+  //second pause
+  delay(1000);
+}

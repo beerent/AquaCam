@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "perform an override to arduino: "
+
+'telnet locahost 5678'
+'0 1 2 \n'
+
+echo "done"
