@@ -23,7 +23,6 @@ def nullConn():
 #waits for connection from arduino hardware on 
 #port 5678
 def setConnection():
-    #from socket import *
     global serverSocket
 
     host = ''
@@ -34,13 +33,11 @@ def setConnection():
     serverSocket.bind((addres))
     serverSocket.listen(5)
 
-    print "Listening for client . . ."
+    report("Listening for connection ...")
 
     
 def sender(str):
-    global serverSocket
     global client
-    global address
     client.send(str)
     report("sent: " + str);
 
@@ -75,8 +72,10 @@ def inputHandler(str):
     #assuming there are no two digit opcodes
     try:
         op = int(input[0])
-        if op == 0:
+        if op == 0: #time request
             sender(timeMaster.getTimeString())
+        elif op == 1: #status request
+            statusRequest()
         else:
             report("no op for: " + input[0] + " in string: " + str)
 
@@ -86,23 +85,18 @@ def inputHandler(str):
 #function manages the lights, turning them on or off
 #light corresponds to the specific light, mode corresponds to the 
 #light turning on or off.
-
-#codes:
-#0: light 1 29 gal.
-#1: light 2 29 gal.
-#2: heater 29 gal.
-#3: OPEN 
-
-#4: light 1 10 gal.
-#5: light 2 10 gal.
-#6:  heater 10 gal.
-#7: OPEN
 def relayManager(pin, mode):
     level, ob;
     if mode == 1:
         ob = "HIGH"
     else:
         ob = "LOW"
+
+#submit status update from arduino to file
+def statusRequest():
+    status = "| " + timeMaster.getTimeString() + " | " + reader() + " |"
+    with open("arduinoStatus.txt", "a") as file:
+        file.write(status)
 
 def runServer():
     global serverSocket
