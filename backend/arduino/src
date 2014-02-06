@@ -1,12 +1,29 @@
+/*
+ * --ARC--
+
+ * circuit:
+ * LCD RS pin to digital pin 12
+ * LCD Enable pin to digital pin 11
+ * LCD D4 pin to digital pin 5
+ * LCD D5 pin to digital pin 4
+ * LCD D6 pin to digital pin 3
+ * LCD D7 pin to digital pin 2
+ * LCD R/W pin to ground
+ * 10K resistor:
+ * ends to +5V and ground
+ * wiper to LCD VO pin (pin 3)
+ */
+
 #include <SPI.h>
 #include <Ethernet.h>
+#include <LiquidCrystal.h>
 
 int pin[2];
 String UUID[2];
 
 byte mac[] = {0x90, 0xA2, 0xDA, 0x0E, 0x40, 0x9F};
 byte ip[] = {192, 168, 2, 172};
-IPAddress server(192,168,1,149);
+IPAddress server(192,168,2,6);
 int port = 5678;
 EthernetClient client;
 int connected;
@@ -17,6 +34,8 @@ int relay[2];
 // on and off times for lights
 int lightOn[2];
 int lightOff[2];
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 // function called when Arduino needs to communicate with server
 void connect2server() {
@@ -96,12 +115,14 @@ void lightManager(){
       t = t.substring(3);
     } 
   }
-  int currentTime;
+  int currentTime = 0;
   
   if(time[0] == 00){
     currentTime = 0;
   } else if(String(time[0]).charAt(0) == '0'){
     currentTime = ((int) String(time[0]).charAt(1) * 100);
+  } else {
+    currentTime = 100 * time[0];
   }
   
   if(String(time[1]).charAt(0) == '0'){
@@ -146,7 +167,16 @@ void statusReport(){
   serverDisconnect();
 }
 
+//temperature layout:
+//
+void reportLCD(){
+}
+
 void setup() {
+  lcd.begin(20, 4);
+  lcd.setCursor(1, 1);
+  lcd.print("welcome to the ARC");
+  
   Serial.begin(9600);
   relayCount = 2;
   setLightTimes();
@@ -168,9 +198,17 @@ void loop() {
   //check time with lights function, requires connection
   lightManager();
 
+  //refresh lcd display
+  reportLCD();
+  
   //submit status of hardware to server
   statusReport();
   
   //minute delay
-  delay(60000);
+  delay(1000);
 }
+
+// GOALS:
+// temperature
+// lcd function
+// dpad
