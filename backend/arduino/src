@@ -44,6 +44,7 @@ int lightOn[2];
 int lightOff[2];
 
 LiquidCrystal lcd(30, 31, 32, 33, 34, 35);
+int LCDPage;
 
 OneWire ds(5);
 
@@ -94,16 +95,27 @@ void relayTimer(int currentTime){
   int max = 2500;
   for(int i = 0; i < relayCount; i++){
     if(((max + currentTime - lightOn[i]) % max) < ((max + lightOff[i] - lightOn[i]) % max)){
-      digitalWrite(pin[i], LOW);
-      relay[i] = 1;
-      print("pin " + String(i) + " launched");
+      if(relay[i] == 0){
+        digitalWrite(pin[i], LOW);
+        relay[i] = 1;
+        print("pin " + String(i) + " launched");
+      }
     }else{
-      digitalWrite(pin[i], HIGH);
-      relay[i] = 0;
-      print("pin " + String(i) + " blogged off");
+      if(relay[i] == 1){ //if we have to...
+        digitalWrite(pin[i], HIGH);
+        relay[i] = 0;
+        print("pin " + String(i) + " blogged off");
+      }
     }
   }
   
+}
+
+void lightManager(){
+  DateTime now = RTC.now();
+  
+  int currentTime = now.hour()*100 + now.minute();
+  relayTimer(currentTime);
 }
 
 /*
@@ -187,14 +199,23 @@ void statusReport(){
 
 //temperature layout:
 void reportLCD(){ 
-  String line [4]; 
-  for(int i = 0; i < 2; i++){
-    if(relay[i] == 0){
-      line[i] = ("Light " + String(i+1) + ": OFF"); 
-    }else{
-      line[i] = ("Light " + String(i+1) + ": ON "); 
-    }
+  String line [4];
+  
+  switch (LCDPage) {
+    case 1:
+      lcd.clear();
+      break;
+    default:
+      for(int i = 0; i < 2; i++){
+        if(relay[i] == 0){
+          line[i] = ("Light " + String(i+1) + ": OFF"); 
+        }else{
+          line[i] = ("Light " + String(i+1) + ": ON "); 
+        }
+      }
   }
+      
+      
   line[2] = "Temperature: " + String(getTemperature());
   line[3] = getTimeString();
   
@@ -216,12 +237,7 @@ String getTimeString() {
     hour = hour - 12; 
   }
   
-  int currentTime = now.hour()*100 + now.minute();
-  relayTimer(currentTime);
-  
-  print("TIME");
-  print("" + String(hour) + ":" + String(now.minute()) + ":" + String(now.second()) + m);
-  return ("" + String(hour) + ":" + String(now.minute()) + ":" + String(now.second()) + " " + m); 
+  return ("" + String(hour) + ":" + String(now.minute()) + " " + m); 
 }
 
 //returns current temperature as an int
@@ -236,38 +252,29 @@ int getTemperature() {
   if ( !ds.search(addr)) {
     ds.reset_search();
     delay(250);
-    return -99;
-  }
-  
-  Serial.print("ROM =");
-  for( i = 0; i < 8; i++) {
-    Serial.write(' ');
-    Serial.print(addr[i], HEX);
   }
 
   if (OneWire::crc8(addr, 7) != addr[7]) {
       print("CRC is not valid!");
-      return-99;
   }
   print("");
  
   // the first ROM byte indicates which chip
   switch (addr[0]) {
     case 0x10:
-      print("  Chip = DS18S20");  // or old DS1820
+      //print("  Chip = DS18S20");  // or old DS1820
       type_s = 1;
       break;
     case 0x28:
-      print("  Chip = DS18B20");
+      //print("  Chip = DS18B20");
       type_s = 0;
       break;
     case 0x22:
-      print("  Chip = DS1822");
+      //print("  Chip = DS1822");
       type_s = 0;
       break;
     default:
       print("Device is not a DS18x20 family device.");
-      return-99;
   } 
 
   ds.reset();
@@ -280,18 +287,11 @@ int getTemperature() {
   present = ds.reset();
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
-
-  Serial.print("  Data = ");
-  Serial.print(present,HEX);
-  Serial.print(" ");
-  for ( i = 0; i < 9; i++) {           // we need 9 bytes
-    data[i] = ds.read();
-    Serial.print(data[i], HEX);
-    Serial.print(" ");
-  }
+  /*
   Serial.print(" CRC=");
   Serial.print(OneWire::crc8(data, 8), HEX);
   print("");
+  */
 
   // convert the data to actual temperature
 
@@ -315,10 +315,10 @@ int getTemperature() {
 }
 
 void print(String s) {
-  print(s); 
+  Serial.println(s); 
 }
 
-void setup() {
+void setup() {  
   // set light pins
   addPin(0, 22, 0, 1, "Light 1");
   relay[0] = 0; 
@@ -330,6 +330,7 @@ void setup() {
   setLightTimes();
   
   //initialize LCD
+
   lcd.begin(20, 4);
   lcd.setCursor(1, 1);
   lcd.print("welcome to the ARC");
@@ -340,13 +341,13 @@ void setup() {
     delay(1000); 
   }
   lcd.clear();
+  LCDPage = 0; //main page
   
   Wire.begin();
   RTC.begin();
   
   //initialize Serial
   Serial.begin(9600);
-  
   
   //initialize ethernet connection
   if (Ethernet.begin(mac) == 0) {
