@@ -26,7 +26,7 @@
   * 1: light2
   */
 
-int pin[2];
+int pin[3];
 String UUID[2];
 
 byte mac[] = {0x90, 0xA2, 0xDA, 0x0E, 0x40, 0x9F};
@@ -42,6 +42,7 @@ int relay[2];
 // on and off times for lights
 int lightOn[2];
 int lightOff[2];
+int lightOveride;
 
 LiquidCrystal lcd(30, 31, 32, 33, 34, 35);
 int LCDPage;
@@ -168,17 +169,6 @@ void lightManager(){
 void setLightTimes(){
   lightOn[0] = 1400; lightOff[0] = 2200;
   lightOn[1] = 1500; lightOff[1] = 2300;
-}
-
-// adds a pin to the arduino
-// ID number, Pin number, OUTPUT/INPUT, LOW/HIGH, Device name
-void addPin(int num, int p, int type, int pos, String name){
-  pin[num] = p;
-  if(type == 0) pinMode(pin[num], OUTPUT);
-  else pinMode(pin[num], INPUT);
-  if(pos == 0) digitalWrite(pin[num], LOW);
-  else digitalWrite(pin[0], HIGH);  
-  UUID[num] = name;
 }
 
 //send the current status of the arduino to the server
@@ -318,16 +308,37 @@ void print(String s) {
   Serial.println(s); 
 }
 
+
+// adds a pin to the arduino
+// ID number, Pin number, OUTPUT/INPUT, LOW/HIGH, Device name
+void addPin(int num, int p, int type, int pos, String name){
+  pin[num] = p;
+  if(type == 0) pinMode(pin[num], OUTPUT);
+  else pinMode(pin[num], INPUT);
+  if(pos == 0) digitalWrite(pin[num], LOW);
+  else digitalWrite(pin[num], HIGH);  
+  UUID[num] = name;
+}
+
 void setup() {  
+    
+  //initialize Serial
+  Serial.begin(9600);
   // set light pins
   addPin(0, 22, 0, 1, "Light 1");
   relay[0] = 0; 
   addPin(1, 23, 0, 1, "Light 2");
   relay[1] = 0;
   
+
+  pin[2] = A0; //i believe A0 is 54
+  pinMode(pin[2], INPUT);
+  digitalWrite(pin[2], HIGH);
+
   //set lights
   relayCount = 2;
   setLightTimes();
+  lightOveride = 0;
   
   //initialize LCD
 
@@ -335,32 +346,138 @@ void setup() {
   lcd.setCursor(1, 1);
   lcd.print("welcome to the ARC");
   //five second swag delay
+  
   for(int i = 0; i < 5; i++){
     lcd.setCursor(i, 2);
     lcd.print(".");
     delay(1000); 
   }
+  
   lcd.clear();
   LCDPage = 0; //main page
   
   Wire.begin();
   RTC.begin();
-  
-  //initialize Serial
-  Serial.begin(9600);
-  
+  /*
   //initialize ethernet connection
   if (Ethernet.begin(mac) == 0) {
     print("Failed to configure Ethernet using DHCP");
     Ethernet.begin(mac, ip);
   }
+  */
   connected = 0;
 }
 
-void loop() {
+int readDpad(){
+  return analogRead(pin[2]);
+}
 
-  lightManager();
+int getDpad(){
+  int dpad = readDpad();
+  
+  if(dpad > 1000){ 
+    //no input
+    return 0; 
+  }
+  
+  if(dpad > 200 && dpad < 450){
+    //up 
+    return 1;
+  }else if(dpad > 700 && dpad < 1000){
+    //down
+    return 2;
+  }else if(dpad > 450 && dpad < 700){
+    //left
+    return 3;
+  }else if(dpad < 200){
+    //right 
+    return 4;
+  }  
+}
+
+int waitForDpad(){
+  delay(1000);
+  int input = 0;
+  while(input == 0){
+    input = getDpad();
+  }
+  return input;
+}
+
+void mainDpad(){
+  int dpad = getDpad();
+  if(dpad == 0) return;
+  else{
+    options();
+  }
+}
+
+void options(){
+  displayOptions();
+}
+
+void displayOptions(){
+  lcd.clear();
+  lcd.print("MENU: ");
+  lcd.setCursor(0, 1);
+  lcd.print("LEFT: Overide Lights");
+  lcd.setCursor(0, 2);
+  lcd.print("RIGHT: Clear Overide");
+  lcd.setCursor(0, 3);
+  lcd.print("DOWN: Exit Menu");
+  int op = waitForDpad();
+  if(op == 3) setLights();
+  else if(op == 4) clearOverride();
+  else if(op == 2) lcd.clear();
+}
+
+void clearOverride(){
+  lcd.clear();
+  lcd.print("resetting");
+  delay(2000);
+  lightOveride = 0;
+}
+
+
+void setLights(){
+  lcd.clear();
+  lcd.print("LIGHT MENU:");
+  lcd.setCursor(0, 1);
+  lcd.print("left = 1 | right = 2");
+  int op = waitForDpad();
+  if(op == 3 || op == 4) lightOverride(op);
+  else lcd.clear();
+}
+
+void lightOverride(int op){
+  lightOveride = 1;
+  if(op == 3) op = 0;
+  else op = 1;
+  lcd.clear();
+  lcd.print("On or Off?");
+  lcd.setCursor(0, 1);
+  lcd.print("left = ON | right = OFF");
+  int mode = waitForDpad();
+  if(mode == 3){
+    //set light op ON 
+    digitalWrite(pin[op], LOW);
+    relay[op] = 1;
+    print("pin " + String(op) + " blogged on");
+  }else if(mode == 4){
+    //set light op OFF
+    digitalWrite(pin[op], HIGH);
+    relay[op] = 0;
+    print("pin " + String(op) + " blogged off");
+  }else{
+    lcd.clear(); 
+  }
+}
+
+void loop() {
+  mainDpad();
+  if(lightOveride == 0) lightManager();
   reportLCD();
+  //delay(250);
   
   //submit status of hardware to server
   //statusReport();
