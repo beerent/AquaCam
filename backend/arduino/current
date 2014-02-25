@@ -51,6 +51,7 @@ int LCDPage;
 OneWire ds(5);
 
 RTC_DS1307 RTC;
+int Time;
 
 void print(String s) {
   Serial.println(s); 
@@ -85,13 +86,13 @@ void lightManager(){
   DateTime now = RTC.now();
   
   int currentTime = now.hour()*100 + now.minute();
-  print(String(currentTime));
-  relayTimer(currentTime);
+  if(currentTime < 2400) Time = currentTime;
+  relayTimer(Time);
 }
 
 void setLightTimes(){
   lightOn[0] = 1400; lightOff[0] = 2200;
-  lightOn[1] = 1500; lightOff[1] = 2300;
+  lightOn[1] = 1445; lightOff[1] = 2245;
 }
 
 // adds a pin to the arduino
@@ -105,27 +106,161 @@ void addPin(int num, int p, int type, int pos, String name){
   UUID[num] = name;
 }
 
+void LCDManager(){
+  int x = 0; int y = 0;
+  lcd.clear();
+  lcd.setCursor(2,0);
+  lcd.print("next page");
+  lcd.setCursor(2, 1);
+  lcd.print("Light 1");
+  lcd.setCursor(2,2);
+  lcd.print("Light 2");
+  lcd.setCursor(2, 3);
+  lcd.print("Remove Override");
+  lcd.setCursor(x,y);
+  lcd.print("->");
+  int command = -1;
+  while(command != 4){
+    command = waitForDpad();
+    if(command == 2 && y <3){ // down
+        lcd.setCursor(x, y);
+        lcd.print("  ");
+        y++;
+        lcd.setCursor(x, y);
+        lcd.print("->");
+    } else if(command == 1 && y > 0){ // up
+      lcd.setCursor(x, y);
+      lcd.print("  ");
+      y--;
+      lcd.setCursor(x, y);
+      lcd.print("->"); 
+    }
+  }
+  changeLCDPage(y);
+}
+
+void changeLCDPage(int page){
+  if(page == 0) return;
+  
+  if(page == 1){
+    setLightsManual(0);
+  }else if(page == 2){
+     setLightsManual(1);
+  }else if(page == 3){
+    lightOveride = 0;
+  }
+}
+
+void setLightsManual(int id){
+  lightOveride = 1;
+  int x = 0; int y = 1;
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("light " + String(id+1));
+  lcd.setCursor(2, 1);
+  lcd.print("ON");
+  lcd.setCursor(2, 2);
+  lcd.print("OFF");
+  
+  lcd.setCursor(x,y);
+  lcd.print("->");
+  int command = -1;
+  while(command != 4){
+    command = waitForDpad();
+    if(command == 2 && y <2){ // down
+        lcd.setCursor(x, y);
+        lcd.print("  ");
+        y++;
+        lcd.setCursor(x, y);
+        lcd.print("->");
+    } else if(command == 1 && y > 1){ // up
+      lcd.setCursor(x, y);
+      lcd.print("  ");
+      y--;
+      lcd.setCursor(x, y);
+      lcd.print("->"); 
+    }
+  }
+  powerLight(id, y-1);
+}
+
+void powerLight(int light, int mode){
+  print("light: " + String(light) + " " + "mode: " + String(mode));
+  if(mode == 0){
+    if(relay[light] == 0){
+      digitalWrite(pin[light], LOW);
+      relay[light] = 1;
+      print("pin " + String(light) + " launched");
+    }
+  }else{
+    if(relay[light] == 1){ //if we have to...
+      digitalWrite(pin[light], HIGH);
+      relay[light] = 0;
+      print("pin " + String(light) + " blogged off");
+    }
+  }
+}
+
+int readDpad(){
+  return analogRead(pin[2]);
+}
+
+int getDpad(){
+  int dpad = readDpad();
+  
+  if(dpad > 1000){ 
+    //no input
+    return 0; 
+  }
+  
+  if(dpad > 200 && dpad < 450){
+    //up 
+    return 1;
+  }else if(dpad > 700 && dpad < 1000){
+    //down
+    return 2;
+  }else if(dpad > 450 && dpad < 700){
+    //left
+    return 3;
+  }else if(dpad < 200){
+    //right 
+    return 4;
+  }  
+}
+
+int waitForDpad(){
+  delay(500);
+  int input = 0;
+  while(input == 0){
+    input = getDpad();
+  }
+  return input;
+}
+
+void dpadTest(){
+  for(int i = 0; i < 5; i++){
+    lcd.clear();
+    lcd.setCursor(0,0);
+  }
+   
+}
+
 void reportLCD(){ 
   String line [4];
-  
-  switch (LCDPage) {
-    case 1:
-      lcd.clear();
-      break;
-    default:
-      for(int i = 0; i < 2; i++){
-        if(relay[i] == 0){
-          line[i] = ("Light " + String(i+1) + ": OFF"); 
-        }else{
-          line[i] = ("Light " + String(i+1) + ": ON "); 
-        }
-      }
+  for(int i = 0; i < 2; i++){
+    if(relay[i] == 0){
+      line[i] = ("Light " + String(i+1) + ": OFF"); 
+    }else{
+      line[i] = ("Light " + String(i+1) + ": ON "); 
+    }
   }
+
       
       
   line[2] = "Temperature: " + Double2String(getTemperature(), 10);
-  print(getTimeString());
-  line[3] = getTimeString();
+  //print(getTimeString());
+  String time = getTimeString();
+  if(time.indexOf("165")<0) line[3] = getTimeString();
   
   lcd.clear();
   for (int i = 0; i < 4; i++){
@@ -167,7 +302,7 @@ double getTemperature() {
   ds.select(addr);
   ds.write(0x44,1);         // start conversion, with parasite power on at the end
   
-  delay(1000);     // maybe 750ms is enough, maybe not
+  //delay(1000);     // maybe 750ms is enough, maybe not
   // we might do a ds.depower() here, but the reset will take care of it.
   
   present = ds.reset();
@@ -196,21 +331,16 @@ double getTemperature() {
   }
   celsius = (float)raw / 16.0;
   fahrenheit = celsius * 1.8 + 32.0;
-  Serial.print("  Temperature = ");
-  Serial.print(fahrenheit);
-  Serial.println(" Fahrenheit");
   return fahrenheit;
 }
 
 //returns a String containing the time
 String getTimeString() {
+  
   String m = "A.M.";
-  DateTime now = RTC.now();
-  int hour = now.hour();
-  int minute = now.minute();
-  
-  
-  return (String(now.hour()) + ":" + String(now.minute()) + m); 
+  String h = String(Time).substring(0, 2);
+  String min = String(Time).substring(2);
+  return h + min + m;
 }
 
 void setup() {  
@@ -269,6 +399,7 @@ String Double2String( double val, unsigned int precision){
 }
 
 void loop() {
-  lightManager();
-  reportLCD();
+  if(lightOveride == 0)lightManager();
+  if(getDpad() == 1) LCDManager();
+  else reportLCD();
 }
