@@ -2,3 +2,5 @@
 *#*
 *~*
 *.pyc
+/arduino-1.0.5/*
+/database/MySQL-python-1.2.4b4/*
