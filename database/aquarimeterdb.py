@@ -1,7 +1,12 @@
 import MySQLdb
 
 #global var of the database
-database = MySQLdb.connect("localhost", "root", "cuse1234", "aquarimeter")
+host = 'localhost'
+user = 'root'
+password = 'arcland'
+database_name = 'aquarameter'
+
+database = MySQLdb.connect(host, user, password, database_name)
 
 #returns a cursor for the current database
 def getCursor():
@@ -29,7 +34,7 @@ def menu():
         print("enter command")
         execute(raw_input())
 
-menu()
+#menu()
 
 
 
