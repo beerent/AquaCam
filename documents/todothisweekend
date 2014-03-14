@@ -1,0 +1,17 @@
+database:
+  -order and design database
+  -do work!!
+
+php:
+  -work on php comminucation with database
+  -implement javascript for protection of database
+
+arduino:
+  -get down to the basics. 
+  -implement most effecient LCD implementation
+  -monitor second tank
+  -
+
+python:
+  -get webcam
+  -implement webcam
