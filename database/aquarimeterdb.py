@@ -1,7 +1,7 @@
 import MySQLdb
 
 #global var of the database
-host = 'localhost'
+host = 'localhost';
 user = 'root'
 password = 'arcland'
 database_name = 'aquarameter'
