@@ -1,5 +1,0 @@
-Day 1:
-
-- installed arduino software. 
-- installed "hello world" software on device. got LED to blink
-- developed code to measure light, and display red LED if over certain voltage, or green LED otherwise.

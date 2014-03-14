@@ -3,8 +3,8 @@ _
 -| homepage
 
 -| networking
-   -| connect via socket connection
-   -| implement protocol to properly send photo
+   x| connect via socket connection
+   x| implement protocol to properly send photo
    -| implement protocol to properly send live video
 
 -| photo page
@@ -25,8 +25,8 @@ x| take picture
 
 Arduino:
 _
--| Get Module
--| Order thermometer
+x| Get Module
+x| Order thermometer
 
 Database:
 _
