@@ -39,13 +39,21 @@ def menu():
         print("enter command")
         execute(raw_input())
 
+#data format: (Table | Node | value)
+#ex: "Light Light1 ON"
+def clientHandler(clientSock):
+	clientSock.send("1") #tell client we are ready for input
+	input = clientSock.recv(1024) #get data from client
+	clientSock.send("1")
+
+
 def runServer():
 	serverSock.listen(5)
 	print("wainting for connection...")
 	while 1:
 		(clientSock, address) = serverSock.accept()
 		ct = client_thread(clientSock)
-		print("connection made.")
+		ct.run()
 
 #menu()
 runServer()
