@@ -4,11 +4,7 @@
 #include <OneWire.h>
 #include <Wire.h>
 #include "RTClib.h"
-
-
 /*
- * --ARC--
-
  * circuit:
  * LCD RS (4) | digital pin 30
  * LCD Enable pin (6) | digital pin 31
@@ -21,253 +17,51 @@
  * ends to +5V and ground
  * wiper to LCD VO pin (pin 3)
  */
- 
- /*pins:
-  * 0: light1
-  * 1: light2
-  */
 
 int pin[3];
-String UUID[2];
-
-byte mac[] = {0x90, 0xA2, 0xDA, 0x0E, 0x40, 0x9F};
-byte ip[] = {192, 168, 2, 172};
-IPAddress server(192,168,2,6);
-int port = 5678;
-EthernetClient client;
-int connected;
-
-int relayCount = 2;
-int relay[2];
+String UUID[3];
+int relayPower[2];
 
 // on and off times for lights
 int lightOn[2];
 int lightOff[2];
-int lightOveride;
 
 LiquidCrystal lcd(30, 31, 32, 33, 34, 35);
 int LCDPage;
+int lcdCursor[4];
 
 OneWire ds(5);
 
 RTC_DS1307 RTC;
+
+// important values
 int Time;
+double Temp;
 
 void print(String s) {
   Serial.println(s); 
 }
 
-/**********ARDUINO FUNCTIONS***********/
-
-// accepts the current time in military time as two parameters
-// turns on/off any devices that use a relay, if they need
-// to be turned on/off. 
-void relayTimer(int currentTime){
-  int max = 2500;
-  for(int i = 0; i < relayCount; i++){
-    if(((max + currentTime - lightOn[i]) % max) < ((max + lightOff[i] - lightOn[i]) % max)){
-      if(relay[i] == 0){
-        digitalWrite(pin[i], LOW);
-        relay[i] = 1;
-        print("pin " + String(i) + " launched");
-      }
-    }else{
-      if(relay[i] == 1){ //if we have to...
-        digitalWrite(pin[i], HIGH);
-        relay[i] = 0;
-        print("pin " + String(i) + " blogged off");
-      }
-    }
-  }
-  
-}
-
-void lightManager(){
-  DateTime now = RTC.now();
-  
-  int currentTime = now.hour()*100 + now.minute();
-  if(currentTime < 2400) Time = currentTime;
-  relayTimer(Time);
+String Double2String( double val, unsigned int precision){
+// prints val with number of decimal places determine by precision
+// NOTE: precision is 1 followed by the number of zeros for the desired number of decimial places
+// example: printDouble( 3.1415, 100); // prints 3.14 (two decimal places)
+    String num = "";
+    num += (int(val));
+    num += ".";
+    unsigned int frac;
+    if(val >= 0)
+        frac = (val - int(val)) * precision;
+    else
+        frac = (int(val)- val ) * precision;
+    num += frac;
+    return num;
 }
 
 void setLightTimes(){
   lightOn[0] = 1400; lightOff[0] = 2200;
   lightOn[1] = 1445; lightOff[1] = 2245;
 }
-
-// adds a pin to the arduino
-// ID number, Pin number, OUTPUT/INPUT, LOW/HIGH, Device name
-void addPin(int num, int p, int type, int pos, String name){
-  pin[num] = p;
-  if(type == 0) pinMode(pin[num], OUTPUT);
-  else pinMode(pin[num], INPUT);
-  if(pos == 0) digitalWrite(pin[num], LOW);
-  else digitalWrite(pin[num], HIGH);  
-  UUID[num] = name;
-}
-
-void LCDManager(){
-  int x = 0; int y = 0;
-  lcd.clear();
-  lcd.setCursor(2,0);
-  lcd.print("next page");
-  lcd.setCursor(2, 1);
-  lcd.print("Light 1");
-  lcd.setCursor(2,2);
-  lcd.print("Light 2");
-  lcd.setCursor(2, 3);
-  lcd.print("Remove Override");
-  lcd.setCursor(x,y);
-  lcd.print("->");
-  int command = -1;
-  while(command != 4){
-    command = waitForDpad();
-    if(command == 2 && y <3){ // down
-        lcd.setCursor(x, y);
-        lcd.print("  ");
-        y++;
-        lcd.setCursor(x, y);
-        lcd.print("->");
-    } else if(command == 1 && y > 0){ // up
-      lcd.setCursor(x, y);
-      lcd.print("  ");
-      y--;
-      lcd.setCursor(x, y);
-      lcd.print("->"); 
-    }
-  }
-  changeLCDPage(y);
-}
-
-void changeLCDPage(int page){
-  if(page == 0) return;
-  
-  if(page == 1){
-    setLightsManual(0);
-  }else if(page == 2){
-     setLightsManual(1);
-  }else if(page == 3){
-    lightOveride = 0;
-  }
-}
-
-void setLightsManual(int id){
-  lightOveride = 1;
-  int x = 0; int y = 1;
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("light " + String(id+1));
-  lcd.setCursor(2, 1);
-  lcd.print("ON");
-  lcd.setCursor(2, 2);
-  lcd.print("OFF");
-  
-  lcd.setCursor(x,y);
-  lcd.print("->");
-  int command = -1;
-  while(command != 4){
-    command = waitForDpad();
-    if(command == 2 && y <2){ // down
-        lcd.setCursor(x, y);
-        lcd.print("  ");
-        y++;
-        lcd.setCursor(x, y);
-        lcd.print("->");
-    } else if(command == 1 && y > 1){ // up
-      lcd.setCursor(x, y);
-      lcd.print("  ");
-      y--;
-      lcd.setCursor(x, y);
-      lcd.print("->"); 
-    }
-  }
-  powerLight(id, y-1);
-}
-
-void powerLight(int light, int mode){
-  print("light: " + String(light) + " " + "mode: " + String(mode));
-  if(mode == 0){
-    if(relay[light] == 0){
-      digitalWrite(pin[light], LOW);
-      relay[light] = 1;
-      print("pin " + String(light) + " launched");
-    }
-  }else{
-    if(relay[light] == 1){ //if we have to...
-      digitalWrite(pin[light], HIGH);
-      relay[light] = 0;
-      print("pin " + String(light) + " blogged off");
-    }
-  }
-}
-
-int readDpad(){
-  return analogRead(pin[2]);
-}
-
-int getDpad(){
-  int dpad = readDpad();
-  
-  if(dpad > 1000){ 
-    //no input
-    return 0; 
-  }
-  
-  if(dpad > 200 && dpad < 450){
-    //up 
-    return 1;
-  }else if(dpad > 700 && dpad < 1000){
-    //down
-    return 2;
-  }else if(dpad > 450 && dpad < 700){
-    //left
-    return 3;
-  }else if(dpad < 200){
-    //right 
-    return 4;
-  }  
-}
-
-int waitForDpad(){
-  delay(500);
-  int input = 0;
-  while(input == 0){
-    input = getDpad();
-  }
-  return input;
-}
-
-void dpadTest(){
-  for(int i = 0; i < 5; i++){
-    lcd.clear();
-    lcd.setCursor(0,0);
-  }
-   
-}
-
-void reportLCD(){ 
-  String line [4];
-  for(int i = 0; i < 2; i++){
-    if(relay[i] == 0){
-      line[i] = ("Light " + String(i+1) + ": OFF"); 
-    }else{
-      line[i] = ("Light " + String(i+1) + ": ON "); 
-    }
-  }
-
-      
-      
-  line[2] = "Temperature: " + Double2String(getTemperature(), 10);
-  //print(getTimeString());
-  String time = getTimeString();
-  if(time.indexOf("165")<0) line[3] = getTimeString();
-  
-  lcd.clear();
-  for (int i = 0; i < 4; i++){
-    lcd.setCursor(0, i); 
-    lcd.print(line[i]);
-  }
-} 
 
 //returns current temperature as an int
 double getTemperature() {
@@ -334,72 +128,171 @@ double getTemperature() {
   return fahrenheit;
 }
 
-//returns a String containing the time
-String getTimeString() {
-  
-  String m = "A.M.";
-  String h = String(Time).substring(0, 2);
-  String min = String(Time).substring(2);
-  return h + min + m;
+// returns 1 if time global var is changed
+int checkTime(){  
+  DateTime now = RTC.now();  
+  int currentTime = now.hour()*100 + now.minute();
+
+  if((currentTime < 2400) && (currentTime != Time)){
+    Time = currentTime;
+    return 1;
+  }
+  return 0;
 }
 
-void setup() {  
+String getTimeString(){
+  String t = String(Time);
+  int h = t.substring(0, 2).toInt();
+  int m = t.substring(2).toInt();
+  if(h > 12) h = h-12;
+  return String(h) + ":" + String(m);
+   
+}
+
+// returns 1 if lights have changed
+int checkLights(){
+  int lightChange = 0;
+  int max = 2500;
+  
+  for(int i = 0; i < 2; i++){
+    if(((max + Time - lightOn[i]) % max) < ((max + lightOff[i] - lightOn[i]) % max)){
+      print(String(i));
+      // should be on/ low
+      if(relayPower[i] != 1){
+        digitalWrite(pin[i], LOW); 
+        relayPower[i] = 1; 
+        lightChange = 1;
+      }
+    }else{
+      // should be off/ high
+      if(relayPower[i] != 0){
+        digitalWrite(pin[i], HIGH); 
+        relayPower[i] = 0;
+        lightChange = 1;
+      }
+    }
+  }
+  return lightChange;
+}
+
+// returns 1 if temperature has changed
+int checkTemperature(){
+  double tempTemp = getTemperature();
+  if (tempTemp != Temp){
+    Temp = tempTemp;
+    return 1;
+  }
+  return 0;
+}
+
+//sets up the 
+void initLCD(){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Light 1: ");
+  lcdCursor[0] = 9;
+
+  lcd.setCursor(0,1);  
+  lcd.print("Light 2: ");
+  lcdCursor[1] = 9;
+
+  lcd.setCursor(0,2);
+  lcd.print("Temp: ");
+  lcdCursor[2] = 6;
+
+  lcdCursor[3] = 0;
+}
+
+void clearLCDLine(int x, int y){
+  lcd.setCursor(x, y);
+  for(int i = 0; i < 20-x; i++){
+    lcd.print(" ");;
+  }
+}
+
+void updateLCD(int time, int lights, int temp){
+  if(time == 1){
+    //change time on lcd
+    String t = getTimeString();
+    print("updating TIME: " + t);
+    clearLCDLine(lcdCursor[3], 3);
+    lcd.setCursor(lcdCursor[3], 3);
+    lcd.print(t);
+  }
+
+  if(lights == 1){
+    //iterate through 2 rows
+    for(int i = 0; i < 2; i++){
+      clearLCDLine(lcdCursor[i], i);
+      lcd.setCursor(lcdCursor[i], i);
+      if(relayPower[i] == 1){
+        lcd.print("ON");
+        print("updating LIGHT " + String(i) + " ON");
+      }else{
+        lcd.print("OFF");
+        print("updating LIGHT " + String(i) + " OFF");
+      }
+    }
+  }
+
+  if(temp == 1){
+    print("updating TEMP: " + Double2String(Temp, 10));
+    //change temp on lcd
+    clearLCDLine(lcdCursor[2], 2);
+    lcd.setCursor(lcdCursor[2], 2);
+    lcd.print(Double2String(Temp, 10));
+  }
+}
+
+// adds a pin to the arduino
+// ID number, Pin number, OUTPUT/INPUT, LOW/HIGH, Device name
+void addPin(int num, int p, int type, int pos, String name){
+  pin[num] = p;
+  if(type == 0) pinMode(pin[num], OUTPUT);
+  else pinMode(pin[num], INPUT);
+  if(pos == 0) digitalWrite(pin[num], LOW);
+  else digitalWrite(pin[num], HIGH);  
+  UUID[num] = name;
+}
+
+void setup(){
     
   //initialize Serial
   Serial.begin(9600);
+  
   // set light pins
   addPin(0, 22, 0, 1, "Light 1");
-  relay[0] = 0; 
   addPin(1, 23, 0, 1, "Light 2");
-  relay[1] = 0;
+  relayPower[0] = -1; 
+  relayPower[1] = -1;
   
-
-  pin[2] = A0; //i believe A0 is 54
+  // thermometer pin initialization
+  pin[2] = A0;
   pinMode(pin[2], INPUT);
   digitalWrite(pin[2], HIGH);
 
   //set lights
-  relayCount = 2;
   setLightTimes();
-  lightOveride = 0;
   
   //initialize LCD
-
   lcd.begin(20, 4);
-
-  LCDPage = 0; //main page
-  
+  initLCD();
   Wire.begin();
   RTC.begin();
-  RTC.adjust(DateTime(__DATE__, __TIME__));
-  /*
-  //initialize ethernet connection
-  if (Ethernet.begin(mac) == 0) {
-    print("Failed to configure Ethernet using DHCP");
-    Ethernet.begin(mac, ip);
+  //RTC.adjust(DateTime(__DATE__, __TIME__));
+
+  Time = -1;
+  Temp = -1;
+}
+
+void loop(){
+  int newTime = checkTime();
+  int newLights = checkLights();
+  int newTemp = checkTemperature();
+  if ((newTime + newLights + newTemp) > 0){
+    updateLCD(newTime, newLights, newTemp);
   }
-  */
-  connected = 0;
-}
-
-String Double2String( double val, unsigned int precision){
-// prints val with number of decimal places determine by precision
-// NOTE: precision is 1 followed by the number of zeros for the desired number of decimial places
-// example: printDouble( 3.1415, 100); // prints 3.14 (two decimal places)
-    String num = "";
-    num += (int(val));
-    num += ".";
-    unsigned int frac;
-    if(val >= 0)
-        frac = (val - int(val)) * precision;
-    else
-        frac = (int(val)- val ) * precision;
-    num += frac;
-    return num;
-}
-
-void loop() {
-  if(lightOveride == 0)lightManager();
-  if(getDpad() == 1) LCDManager();
-  else reportLCD();
+    
+  //[-] submit to database
+    //[-] if values are different from database values, update them
 }
