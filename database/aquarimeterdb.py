@@ -54,9 +54,10 @@ def updateSQL(data):
 		report(data[0])
 	return execute(cmd)
 
-#data format: (Table | row | name | value)
-#op's: 0 - table 
-#ex: "Light Light1 ON"
+# accepts a socket connected to a client
+# sends the client "1" to tell them we are ready
+# for their data. accepts data, then reports back 
+# "1" if their command was successful, or -1 otherwise
 def clientHandler(clientSock):
 	clientSock.send("1") #tell client we are ready for input
 	input = clientSock.recv(1024) #get data from client
@@ -91,4 +92,6 @@ def menu():
 	
 	if command == '1':
 		runServer()
+
+#begin server
 menu()
