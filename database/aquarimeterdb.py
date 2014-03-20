@@ -1,6 +1,7 @@
 import MySQLdb
 import socket
 import thread
+import sys
 
 #***** server var's *****#
 
@@ -17,6 +18,9 @@ database_name = 'aquarimeter'
 #database: connected to aquarimeter mysql 
 database = MySQLdb.connect(host, user, password, database_name)
 
+def report(str):
+	print("[SERVER] " + str)
+
 #returns a cursor for the current database
 def getCursor():
     return database.cursor()
@@ -28,34 +32,25 @@ def execute(sqlCommand):
 	try:
 		cursor.execute(sql)
 		database.commit()
-		print("database committed")
+		report("database committed")
+		return 1;
 	except:
 		database.rollback()
-		print("database fail")
-
-	
-
-def menu():
-    print("what would you like to do?")
-    print("1: execute SQL command.")
-    input = raw_input()
-    if(input == "1"):
-        print("enter command")
-        execute(raw_input())
+		report("database fail")
 
 #accepts an array of string as a paramater
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
 def updateSQL(data):
 	cmd = ''
-	print(data)
 	if data[0] == 'insert':
+		#fix this
 		cmd = """ insert into aquarium (data[1], data[2]) values (data[3], data[4])"""
 	elif data[0] == 'update':
-		cmd = (" update " + data[1] + " set " + data[2] + " = '%c' where " + data[4] + " = '%s'") %  (data[3], data[5])
+		cmd = (" update aquarium set " + data[1] + " = '%c' where " + data[3] + " = '%s'") %  (data[2], data[4])
 	else:
-		print(data[0])
-	execute(cmd)
+		report(data[0])
+	return execute(cmd)
 
 #data format: (Table | row | name | value)
 #op's: 0 - table 
@@ -63,20 +58,33 @@ def updateSQL(data):
 def clientHandler(clientSock):
 	clientSock.send("1") #tell client we are ready for input
 	input = clientSock.recv(1024) #get data from client
-	clientSock.send("1") #can now terminate connection.
-	data = input.split()
-	updateSQL(data) 
-	#print data
+	if "drop" in input:
+		report("command contains 'drop', will not continue.")
+		clientSock.send("-1")
+	else:
+		data = input.split()
+		complete = updateSQL(data)
+		clientSock.send(str(complete)) #can now terminate connection.
 
 # listens for clients forever. Upon a connection, 
 # clientHandler is called, passing in the socket connected
 # to the client 
 def runServer():
 	serverSock.listen(5)
-	print("wainting for connection...")
+	report("waiting for connection...")
 	while 1:
 		clientSock, address = serverSock.accept()
-		print ("connection made")
+		report ("connection made")
 		thread.start_new_thread(clientHandler, (clientSock,))
-#menu()
-runServer()
+	
+def menu():
+	if len(sys.argv) > 0:
+		command = sys.argv[1]
+	else:
+		report("what would you like to do?")
+		report("1: run server")
+		command = raw_input('--> ')
+	
+	if command == '1':
+		runServer()
+menu()
