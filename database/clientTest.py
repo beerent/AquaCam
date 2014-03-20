@@ -7,7 +7,7 @@ s = socket.socket()
 s.connect((socket.gethostname(), 1234))
 data = s.recv(512)
 report(data)
-s.send("update active N aquarium_name test")
+s.send("update active N aquarium_name0 riley1")
 data = s.recv(512)
 report(data)
 

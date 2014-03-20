@@ -18,6 +18,7 @@ database_name = 'aquarimeter'
 #database: connected to aquarimeter mysql 
 database = MySQLdb.connect(host, user, password, database_name)
 
+# used to print statements, appending "[SERVER]" to the front
 def report(str):
 	print("[SERVER] " + str)
 
@@ -26,17 +27,18 @@ def getCursor():
     return database.cursor()
 
 #executes a command that is passed in to the database
+#returns 1 if successful, else returns -1
 def execute(sqlCommand):
 	cursor = getCursor()
-	sql = sqlCommand
 	try:
-		cursor.execute(sql)
+		cursor.execute(sqlCommand)
 		database.commit()
 		report("database committed")
 		return 1;
 	except:
 		database.rollback()
 		report("database fail")
+		return "-1"
 
 #accepts an array of string as a paramater
 #depending on the desired operation, the strings in the
@@ -77,6 +79,8 @@ def runServer():
 		report ("connection made")
 		thread.start_new_thread(clientHandler, (clientSock,))
 	
+# prints the possible options and runs what the user selects
+# can also pass in an argument to skip the foreplay 	
 def menu():
 	if len(sys.argv) > 0:
 		command = sys.argv[1]
