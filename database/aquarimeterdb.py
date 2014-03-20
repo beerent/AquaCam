@@ -19,15 +19,21 @@ database = MySQLdb.connect(host, user, password, database_name)
 
 #returns a cursor for the current database
 def getCursor():
-    return db.cursor()
+    return database.cursor()
 
 #executes a command that is passed in to the database
 def execute(sqlCommand):
-    try:
-        cursor.execute(sqlCommand)
-        database.commit()
-    except:
-        database.rollback()
+	cursor = getCursor()
+	sql = sqlCommand
+	try:
+		cursor.execute(sql)
+		database.commit()
+		print("database committed")
+	except:
+		database.rollback()
+		print("database fail")
+
+	
 
 def menu():
     print("what would you like to do?")
@@ -37,10 +43,18 @@ def menu():
         print("enter command")
         execute(raw_input())
 
+#accepts an array of string as a paramater
+#depending on the desired operation, the strings in the
+#array are plugged in accordingly.
 def updateSQL(data):
 	cmd = ''
-	if data[0] == 0:
-		cmd = "update " + data[1] + " set " + data[2] + "=" + data[3] + " where " + data[4] + "=" + data[5]
+	print(data)
+	if data[0] == 'insert':
+		cmd = """ insert into aquarium (data[1], data[2]) values (data[3], data[4])"""
+	elif data[0] == 'update':
+		cmd = (" update " + data[1] + " set " + data[2] + " = '%c' where " + data[4] + " = '%s'") %  (data[3], data[5])
+	else:
+		print(data[0])
 	execute(cmd)
 
 #data format: (Table | row | name | value)
@@ -54,7 +68,9 @@ def clientHandler(clientSock):
 	updateSQL(data) 
 	#print data
 
-
+# listens for clients forever. Upon a connection, 
+# clientHandler is called, passing in the socket connected
+# to the client 
 def runServer():
 	serverSock.listen(5)
 	print("wainting for connection...")
