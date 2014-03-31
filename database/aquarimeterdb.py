@@ -4,10 +4,7 @@ import thread
 import sys
 
 #***** server var's *****#
-
-#serverSock: server's socket
-serverSock = socket.socket()
-serverSock.bind((socket.gethostname(), 1234))
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 #global var of the database
 host = 'localhost';
@@ -45,7 +42,7 @@ def execute(sqlCommand):
 #accepts an array of string as a paramater
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
-def updateSQL(data):
+def insertSQL(data):
 	cmd = 'null'
 	# insert to history tables
 	# img_path, time, aquarium_name, temperature, date
@@ -55,8 +52,18 @@ def updateSQL(data):
 	# light_number, date, time, power
 	elif data[0] == "2":
 		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ")"
-		print cmd;
 	return execute(cmd);
+
+def opHandler(clientSock, op):
+	clientSock.send("1")
+	report("send here")
+	if(op == "1"): #insert request
+		for x in range(0, 2):
+			input = clientSock.recv(1024)
+			data = input.split()
+			complete = insertSQL(data)
+			clientSock.send(str(complete)) 
+
 
 # accepts a socket connected to a client
 # sends the client "1" to tell them we are ready
@@ -64,27 +71,21 @@ def updateSQL(data):
 # "1" if their command was successful, or -1 otherwise
 def clientHandler(clientSock):
 	clientSock.send("1") #tell client we are ready for input
-	input = clientSock.recv(1024) #get data from client
-	while input != "0":
-		if "drop" in input:
-			report("command contains 'drop', will not continue.")
-			clientSock.send("-1")
-		else:
-			data = input.split()
-			complete = updateSQL(data)
-			clientSock.send(str(complete)) 
-			input = clientSock.recv(1024) #get data from client
-			print input;
+	input = clientSock.recv(512) #get op code from client
+	opHandler(clientSock, input)
+	#report("connection closed.")
+	#clientSock.close()
 
 # listens for clients forever. Upon a connection, 
 # clientHandler is called, passing in the socket connected
 # to the client 
 def runServer():
-	serverSock.listen(5)
-	report("waiting for connection...")
+	serverSocket.bind(('', 5678))
+	serverSocket.listen(5)
+	report("Listening for connection ...")
 	while 1:
-		clientSock, address = serverSock.accept()
-		report ("connection made")
+		clientSock, ad = serverSocket.accept()
+		report ("connection made: ")
 		thread.start_new_thread(clientHandler, (clientSock,))
 	
 # prints the possible options and runs what the user selects
