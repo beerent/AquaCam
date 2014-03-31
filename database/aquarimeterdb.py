@@ -56,7 +56,6 @@ def insertSQL(data):
 
 def opHandler(clientSock, op):
 	clientSock.send("1")
-	report("send here")
 	if(op == "1"): #insert request
 		for x in range(0, 2):
 			input = clientSock.recv(1024)
