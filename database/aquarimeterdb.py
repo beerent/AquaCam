@@ -45,13 +45,20 @@ def execute(sqlCommand):
 def insertSQL(data):
 	cmd = 'null'
 	# insert to history tables
-	# img_path, time, aquarium_name, temperature, date
+	# time, aquarium_name, temperature, date
 	if data[0] == "1":
-		img_path = "null"
-		cmd = "insert into history values (" + img_path + ", " + data[1] + ", " + data[2]+", " + data[3] + ", curdate())"
+		id = 0;
+		cmd = "insert into temp_history values (" + data[1] + ", " + data[2]+", " + data[3] + ", curdate(), " + str(id) + ")"
+		print(cmd)
 	# light_number, date, time, power
 	elif data[0] == "2":
-		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ")"
+		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ", " + data[4] + ")"
+		print(cmd)
+	elif data[0] == "3":
+		id = 0;
+		img_path = "null"
+		cmd = "insert into img_history values (" + str(id) + ", " + img_path + ")"
+		print(cmd)
 	return execute(cmd);
 
 def opHandler(clientSock, op):
@@ -70,8 +77,10 @@ def opHandler(clientSock, op):
 # "1" if their command was successful, or -1 otherwise
 def clientHandler(clientSock):
 	clientSock.send("1") #tell client we are ready for input
-	input = clientSock.recv(512) #get op code from client
-	opHandler(clientSock, input)
+	input = clientSock.recv(1024)
+	data = input.split()
+	complete = insertSQL(data)
+	clientSock.send(str(complete))
 	#report("connection closed.")
 	#clientSock.close()
 
@@ -84,7 +93,8 @@ def runServer():
 	report("Listening for connection ...")
 	while 1:
 		clientSock, ad = serverSocket.accept()
-		report ("connection made: ")
+		ip = ad
+		report ("connection made")
 		thread.start_new_thread(clientHandler, (clientSock,))
 	
 # prints the possible options and runs what the user selects
@@ -101,4 +111,4 @@ def menu():
 		runServer()
 
 #begin server
-menu()
+menu() 
