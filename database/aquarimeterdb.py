@@ -29,6 +29,8 @@ def getCursor():
 #executes a command that is passed in to the database
 #returns 1 if successful, else returns -1
 def execute(sqlCommand):
+	if sqlCommand == "null":
+		return "-1";
 	cursor = getCursor()
 	try:
 		cursor.execute(sqlCommand)
@@ -44,15 +46,16 @@ def execute(sqlCommand):
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
 def updateSQL(data):
-	cmd = ''
+	cmd = 'null'
 	# insert to history tables
 	# img_path, time, aquarium_name, temperature, date
 	if data[0] == "1":
 		img_path = "null"
 		cmd = "insert into history values (" + img_path + ", " + data[1] + ", " + data[2]+", " + data[3] + ", curdate())"
-		report(cmd)
 	# light_number, date, time, power
-
+	elif data[0] == "2":
+		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ")"
+		print cmd;
 	return execute(cmd);
 
 # accepts a socket connected to a client
@@ -62,13 +65,16 @@ def updateSQL(data):
 def clientHandler(clientSock):
 	clientSock.send("1") #tell client we are ready for input
 	input = clientSock.recv(1024) #get data from client
-	if "drop" in input:
-		report("command contains 'drop', will not continue.")
-		clientSock.send("-1")
-	else:
-		data = input.split()
-		complete = updateSQL(data)
-		clientSock.send(str(complete)) #can now terminate connection.
+	while input != "0":
+		if "drop" in input:
+			report("command contains 'drop', will not continue.")
+			clientSock.send("-1")
+		else:
+			data = input.split()
+			complete = updateSQL(data)
+			clientSock.send(str(complete)) 
+			input = clientSock.recv(1024) #get data from client
+			print input;
 
 # listens for clients forever. Upon a connection, 
 # clientHandler is called, passing in the socket connected
