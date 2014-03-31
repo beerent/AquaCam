@@ -13,9 +13,9 @@ serverSock.bind((socket.gethostname(), 1234))
 host = 'localhost';
 user = 'root'
 password = 'cuse1234'
-database_name = 'aquarimeter'
+database_name = 'aquarameter'
 
-#database: connected to aquarimeter mysql 
+#database: connected to aquarameter mysql 
 database = MySQLdb.connect(host, user, password, database_name)
 
 # used to print statements, appending "[SERVER]" to the front
@@ -45,14 +45,15 @@ def execute(sqlCommand):
 #array are plugged in accordingly.
 def updateSQL(data):
 	cmd = ''
-	if data[0] == 'insert':
-		#fix this
-		cmd = """ insert into aquarium (data[1], data[2]) values (data[3], data[4])"""
-	elif data[0] == 'update':
-		cmd = (" update aquarium set " + data[1] + " = '%c' where " + data[3] + " = '%s'") %  (data[2], data[4])
-	else:
-		report(data[0])
-	return execute(cmd)
+	# insert to history tables
+	# img_path, time, aquarium_name, temperature, date
+	if data[0] == "1":
+		img_path = "null"
+		cmd = "insert into history values (" + img_path + ", " + data[1] + ", " + data[2]+", " + data[3] + ", curdate())"
+		report(cmd)
+	# light_number, date, time, power
+
+	return execute(cmd);
 
 # accepts a socket connected to a client
 # sends the client "1" to tell them we are ready
@@ -83,7 +84,7 @@ def runServer():
 # prints the possible options and runs what the user selects
 # can also pass in an argument to skip the foreplay 	
 def menu():
-	if len(sys.argv) > 0:
+	if len(sys.argv) > 1:
 		command = sys.argv[1]
 	else:
 		report("what would you like to do?")
