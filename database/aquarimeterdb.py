@@ -42,7 +42,7 @@ def execute(sqlCommand):
 #accepts an array of string as a paramater
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
-def insertSQL(data):
+def sendSQL(data):
 	cmd = 'null'
 	# insert to history tables
 	# time, aquarium_name, temperature, date
@@ -59,6 +59,9 @@ def insertSQL(data):
 		img_path = "null"
 		cmd = "insert into img_history values (" + str(id) + ", " + img_path + ")"
 		print(cmd)
+	else:
+		print(data)
+		return "-1";
 	return execute(cmd);
 
 def opHandler(clientSock, op):
@@ -79,7 +82,7 @@ def clientHandler(clientSock):
 	clientSock.send("1") #tell client we are ready for input
 	input = clientSock.recv(1024)
 	data = input.split()
-	complete = insertSQL(data)
+	complete = sendSQL(data)
 	clientSock.send(str(complete))
 	#report("connection closed.")
 	#clientSock.close()
