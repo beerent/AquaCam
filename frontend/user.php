@@ -25,7 +25,7 @@
         onClick = "window.location.href='./getPic.php'"
       >
     </form>
-
+<!--
     <form> 
       <input 
         type = "button" 
@@ -33,7 +33,7 @@
         onClick = "window.location.href='./getVid.php'"
       >
     </form>
-
+-->
     </center>
 
   </body>
