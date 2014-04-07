@@ -3,6 +3,9 @@ import socket
 import thread
 import sys
 
+import pygame.camera
+import pygame.image
+
 #***** server var's *****#
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -12,8 +15,18 @@ user = 'root'
 password = 'cuse1234'
 database_name = 'aquarameter'
 
+#global camera object. starts as None
+cam = None
+
 #database: connected to aquarameter mysql 
 database = MySQLdb.connect(host, user, password, database_name)
+
+#called when program starts to initialize the camera for further uses.
+def cameraInit():
+	global cam
+	pygame.camera.init()
+	cam = pygame.camera.Camera(pygame.camera.list_cameras()[0])
+	cam.start()
 
 # used to print statements, appending "[SERVER]" to the front
 def report(str):
@@ -39,13 +52,20 @@ def execute(sqlCommand):
 		report("database fail")
 		return "-1"
 
+def getImage(imgName):
+	capture = cv.CaptureFromCAM(0)
+	img = cv.QueryFrame(capture)
+	cv.ShowImage("camera", img)
+	cv.SaveImage('pic{:>05}.jpg'.format(1), img)
+	return "a"
+
 #accepts an array of string as a paramater
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
 def sendSQL(data):
+	global count
 	cmd = 'null'
-	# insert to history tables
-	# time, aquarium_name, temperature, date
+
 	if data[0] == "1":
 		id = 0;
 		cmd = "insert into temp_history values (" + data[1] + ", " + data[2]+", " + data[3] + ", curdate(), " + str(id) + ")"
@@ -55,10 +75,12 @@ def sendSQL(data):
 		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ", " + data[4] + ")"
 		print(cmd)
 	elif data[0] == "3":
-		id = 0;
-		img_path = "null"
-		cmd = "insert into img_history values (" + str(id) + ", " + img_path + ")"
-		print(cmd)
+		id = 0
+		img_path = "/var/www/images/" + data[2][1:len(data[2])-1] + "/" + data[1][1:len(data[1])-1] + "/test.jpg"
+		img = cam.get_image()
+		pygame.image.save(img, img_path)
+		pygame.camera.quit()
+		cmd = "insert into img_history values (" + str(id) + ", \"" + img_path + "\", " + data[1]+", " + data[2] + ")";
 	else:
 		print(data)
 		return "-1";
@@ -91,7 +113,7 @@ def clientHandler(clientSock):
 # clientHandler is called, passing in the socket connected
 # to the client 
 def runServer():
-	serverSocket.bind(('', 5678))
+	serverSocket.bind(('', 5677))
 	serverSocket.listen(5)
 	report("Listening for connection ...")
 	while 1:
@@ -103,6 +125,7 @@ def runServer():
 # prints the possible options and runs what the user selects
 # can also pass in an argument to skip the foreplay 	
 def menu():
+	cameraInit()
 	if len(sys.argv) > 1:
 		command = sys.argv[1]
 	else:
