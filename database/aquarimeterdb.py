@@ -21,6 +21,8 @@ cam = None
 #database: connected to aquarameter mysql 
 database = MySQLdb.connect(host, user, password, database_name)
 
+arduinoUpdateBit = -1
+
 #called when program starts to initialize the camera for further uses.
 def cameraInit():
 	global cam
@@ -31,6 +33,10 @@ def cameraInit():
 # used to print statements, appending "[SERVER]" to the front
 def report(str):
 	print("[SERVER] " + str)
+
+def arduinoRequest(op):
+	arduinoUpdateBit = 1
+	return 1;
 
 #returns a cursor for the current database
 def getCursor():
@@ -52,13 +58,6 @@ def execute(sqlCommand):
 		report("database fail")
 		return "-1"
 
-def getImage(imgName):
-	capture = cv.CaptureFromCAM(0)
-	img = cv.QueryFrame(capture)
-	cv.ShowImage("camera", img)
-	cv.SaveImage('pic{:>05}.jpg'.format(1), img)
-	return "a"
-
 #accepts an array of string as a paramater
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
@@ -72,20 +71,28 @@ def sendSQL(data):
 		print(cmd)
 	# light_number, date, time, power
 	elif data[0] == "2":
-		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ", " + data[4] + ")"
+		id = 9
+		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ", " + data[4] + ", " + data[5] + ", " + str(id) + ")"
 		print(cmd)
 	elif data[0] == "3":
 		id = 0
 		img_path = "/var/www/images/" + data[2][1:len(data[2])-1] + "/" + data[1][1:len(data[1])-1] + "/test.jpg"
+		
+		#needs to call three times to get current photo.
+		#not sure why. must have a buffer.
+		img = cam.get_image()
+		img = cam.get_image()
 		img = cam.get_image()
 		pygame.image.save(img, img_path)
 		pygame.camera.quit()
-		cmd = "insert into img_history values (" + str(id) + ", \"" + img_path + "\", " + data[1]+", " + data[2] + ")";
+		cmd = "insert into img_history values (" + str(id) + ", \"" + img_path + "\", " + data[1]+", " + data[2] + ", curdate(), " + data[3] + ")";
+		print(cmd)
 	else:
 		print(data)
 		return "-1";
 	return execute(cmd);
 
+'''
 def opHandler(clientSock, op):
 	clientSock.send("1")
 	if(op == "1"): #insert request
@@ -94,17 +101,46 @@ def opHandler(clientSock, op):
 			data = input.split()
 			complete = insertSQL(data)
 			clientSock.send(str(complete)) 
-
+'''
 
 # accepts a socket connected to a client
 # sends the client "1" to tell them we are ready
 # for their data. accepts data, then reports back 
 # "1" if their command was successful, or -1 otherwise
 def clientHandler(clientSock):
-	clientSock.send("1") #tell client we are ready for input
+	global arduinoUpdateBit
+	clientSock.send("1") #ready for input
+	client = clientSock.recv(1024) # determine who client is
+	report("client = " + client)
+	
+	if client == "A":
+		if arduinoUpdateBit == 1: #we need a UNI update
+			clientSock.send("2"); #2 tells arduino we need UNI update
+			input = clientSock.recv(1024) #duino says she understands
+			arduinoUpdateBit = 0; 
+			return
+		
+	clientSock.send("1") #tell duino client we are ready for input
 	input = clientSock.recv(1024)
 	data = input.split()
-	complete = sendSQL(data)
+		
+	if(data[0] == "-1"): #arduino is just checking for requests
+		cliendSock.send(str(arduinoUpdateBit))
+	elif(int(data[0]) in range(0,4)): #arduino has an insert request
+		complete = sendSQL(data)
+	else:
+		clientSock.send("-1")
+		return
+		
+
+	if client == "P":
+		if(int(data[0]) == 4): #php has an arduino request
+			report("found 4")
+			complete = arduinoRequest(0)
+		else:
+			clientSock.send("-1")
+			return
+				
 	clientSock.send(str(complete))
 	#report("connection closed.")
 	#clientSock.close()
@@ -126,6 +162,7 @@ def runServer():
 # can also pass in an argument to skip the foreplay 	
 def menu():
 	cameraInit()
+	arduinoUpdateBit = 0
 	if len(sys.argv) > 1:
 		command = sys.argv[1]
 	else:

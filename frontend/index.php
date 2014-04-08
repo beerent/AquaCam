@@ -23,34 +23,33 @@
     
     <br><br><br>
 
-    <!-- The form Value's represent the user. There are TWO users,
-         Riley (0), and Brent(1).
-      -->
-      <center>
-<?php 
+    <center>
+    
+    <?php 
  
-  $database = mysqli_connect("localhost","root","cuse1234","aquarameter");
-  // Check connection
-  if (mysqli_connect_errno()){
-    echo "Failed to connect to MySQL: " . mysqli_connect_error();
-  }
+      $database = mysqli_connect("localhost","root","cuse1234","aquarameter");
+      // Check connection
+      if (mysqli_connect_errno()){
+        echo "Failed to connect to MySQL: " . mysqli_connect_error();
+      }
 
-  $img = mysqli_query($database, "select aquarium.aquarium_name, aquarium.owner, img_path from aquarium, img_history where aquarium.aquarium_name = img_history.aquarium_name and aquarium.owner = img_history.owner and img_history.ID = -1");
-  while($row = mysqli_fetch_array($img)){
-    echo $row['owner'] . "'s tank: " . $row['aquarium_name'];
-    echo "<br>";
-    echo "<form action=\"user.php\" 
-    method=\"post\">
-      <input type=\"image\" 
-       src=\"" . $row['img_path'] . "\"\;
-       width=\"20%\"
-      />
-      <input type=\"hidden\" name=\"user\" value=\"0\">
-    </form>";
-  }
-
-   mysqli_close($database);
- ?> 
+      $index_q = mysqli_query($database, "select aquarium.aquarium_name, aquarium.owner, img_path from aquarium, img_history where aquarium.aquarium_name = img_history.aquarium_name and aquarium.owner = img_history.owner and img_history.ID = -1");
+      while($row = mysqli_fetch_array($index_q)){
+        echo $row['owner'] . "'s Aquarium: " . $row['aquarium_name'];
+        echo "<br>";
+        echo "<form action=\"user.php\" 
+          method=\"post\">
+          <input type=\"image\" 
+          src=\"" . $row['img_path'] . "\"\;
+          width=\"20%\"
+          />
+          <input type=\"hidden\" name=\"owner\" value=\"" . $row['owner'] . "\">
+          <input type=\"hidden\" name=\"aquarium_name\" value=\"" . $row['aquarium_name'] . "\">
+          </form>";
+      }
+      mysqli_close($database);
+    ?> 
+    
     </center>
     <footer>Brent Ryczak (brentryczak@gmail.com)</footer>
   </body>
