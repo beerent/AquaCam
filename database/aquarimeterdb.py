@@ -35,7 +35,9 @@ def report(str):
 	print("[SERVER] " + str)
 
 def arduinoRequest(op):
+	global arduinoUpdateBit
 	arduinoUpdateBit = 1
+	report("arduinoUpdateBit set to 1")
 	return 1;
 
 #returns a cursor for the current database
@@ -115,9 +117,10 @@ def clientHandler(clientSock):
 	
 	if client == "A":
 		if arduinoUpdateBit == 1: #we need a UNI update
+			arduinoUpdateBit = 0; 
+			report("arduinoUpdateBit set to 0")
 			clientSock.send("2"); #2 tells arduino we need UNI update
 			input = clientSock.recv(1024) #duino says she understands
-			arduinoUpdateBit = 0; 
 			return
 		
 	clientSock.send("1") #tell duino client we are ready for input
@@ -127,20 +130,14 @@ def clientHandler(clientSock):
 	if(data[0] == "-1"): #arduino is just checking for requests
 		cliendSock.send(str(arduinoUpdateBit))
 	elif(int(data[0]) in range(0,4)): #arduino has an insert request
-		complete = sendSQL(data)
+		complete = sendSQL(data)		
+	elif(int(data[0]) == 4): #php has an arduino request
+		report("found 4")
+		complete = arduinoRequest(0)
 	else:
 		clientSock.send("-1")
 		return
-		
 
-	if client == "P":
-		if(int(data[0]) == 4): #php has an arduino request
-			report("found 4")
-			complete = arduinoRequest(0)
-		else:
-			clientSock.send("-1")
-			return
-				
 	clientSock.send(str(complete))
 	#report("connection closed.")
 	#clientSock.close()
