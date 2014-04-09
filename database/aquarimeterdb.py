@@ -64,6 +64,8 @@ def execute(sqlCommand):
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
 def sendSQL(data):
+	print("receivedd: ")
+
 	global count
 	cmd = 'null'
 
@@ -94,53 +96,55 @@ def sendSQL(data):
 		return "-1";
 	return execute(cmd);
 
-'''
-def opHandler(clientSock, op):
-	clientSock.send("1")
-	if(op == "1"): #insert request
-		for x in range(0, 2):
-			input = clientSock.recv(1024)
-			data = input.split()
-			complete = insertSQL(data)
-			clientSock.send(str(complete)) 
-'''
-
-# accepts a socket connected to a client
-# sends the client "1" to tell them we are ready
-# for their data. accepts data, then reports back 
-# "1" if their command was successful, or -1 otherwise
-def clientHandler(clientSock):
+def php(clientSock):
 	global arduinoUpdateBit
-	clientSock.send("1") #ready for input
-	client = clientSock.recv(1024) # determine who client is
-	report("client = " + client)
-	
-	if client == "A":
-		if arduinoUpdateBit == 1: #we need a UNI update
-			arduinoUpdateBit = 0; 
-			report("arduinoUpdateBit set to 0")
-			clientSock.send("2"); #2 tells arduino we need UNI update
-			input = clientSock.recv(1024) #duino says she understands
-			return
-		
-	clientSock.send("1") #tell duino client we are ready for input
-	input = clientSock.recv(1024)
-	data = input.split()
-		
-	if(data[0] == "-1"): #arduino is just checking for requests
-		cliendSock.send(str(arduinoUpdateBit))
-	elif(int(data[0]) in range(0,4)): #arduino has an insert request
-		complete = sendSQL(data)		
-	elif(int(data[0]) == 4): #php has an arduino request
-		report("found 4")
-		complete = arduinoRequest(0)
-	else:
-		clientSock.send("-1")
-		return
+	clientSock.send("1")
+	data = clientSock.recv(512)
+	if(data == "4"):
+		arduinoRequest("4")
 
-	clientSock.send(str(complete))
-	#report("connection closed.")
-	#clientSock.close()
+def arduino(clientSock):
+	global arduinoUpdateBit
+	if(arduinoUpdateBit == 1):
+		report("begin uni update")
+		clientSock.send("2")
+		tempReq = clientSock.recv(512)
+		clientSock.send("1")
+		light1Req = clientSock.recv(512)
+		clientSock.send("1")
+		light2Req = clientSock.recv(512)
+
+		sendSQL(tempReq.split())
+		sendSQL(light1Req.split())
+		sendSQL(light2Req.split())
+		sendSQL(("3 \"tank1\" \"riley\" \"1240\"").split())
+
+		clientSock.send("1")
+		close = clientSock.recv(512)
+		if(close == "1"):
+			clientSock.close()
+		arduinoUpdateBit = 0
+		report("uni complete.")
+	else:
+		clientSock.send("1")
+		data = clientSock.recv(512)
+		if(data == "-1"):
+			report("just checking")
+		else:
+			data = data.split()
+			complete = sendSQL(data)	
+			clientSock.send(str(complete))
+			data = clientSock.recv(512)
+			clientSock.close()
+			report("connection closed.")
+
+def clientHandler(clientSock):
+	clientSock.send("1") #sends hello
+	data = clientSock.recv(512)
+	if(data == "A"):
+		arduino(clientSock)
+	elif(data == "P"):
+		php(clientSock)
 
 # listens for clients forever. Upon a connection, 
 # clientHandler is called, passing in the socket connected
@@ -153,7 +157,8 @@ def runServer():
 		clientSock, ad = serverSocket.accept()
 		ip = ad
 		report ("connection made")
-		thread.start_new_thread(clientHandler, (clientSock,))
+		clientHandler(clientSock)
+		#thread.start_new_thread(clientHandler, (clientSock,))
 	
 # prints the possible options and runs what the user selects
 # can also pass in an argument to skip the foreplay 	

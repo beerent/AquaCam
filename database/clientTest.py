@@ -68,6 +68,7 @@ def universalUpdate():
 	data = s.recv(512)
 	if data == "2":
 		report("update all request")
+		s.close()
 		updateAll()
 		return
 	s.send("4")
@@ -82,4 +83,5 @@ def updateAll():
 	insertImg()
 
 #universalUpdate()
-insertTemp()
+#insertTemp()
+updateAll();
