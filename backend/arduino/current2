@@ -4,19 +4,6 @@
 #include <OneWire.h>
 #include <Wire.h>
 #include "RTClib.h"
-/*
- * circuit:
- * LCD RS (4) | digital pin 30
- * LCD Enable pin (6) | digital pin 31
- * LCD D4 pin to digital pin 32
- * LCD D5 pin to digital pin 33
- * LCD D6 pin to digital pin 34
- * LCD D7 pin to digital pin 35
- * LCD R/W (5) | ground
- * 10K resistor:
- * ends to +5V and ground
- * wiper to LCD VO pin (pin 3)
- */
 
 int pin[3];
 String UUID[3];
@@ -39,17 +26,17 @@ RTC_DS1307 RTC; // Clock
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress ip(192,168,0,177);
 IPAddress server(192,168,1,149); 
-int port = 5678;
+int port = 5677;
 EthernetClient client;
-
 
 // important values
 int Time;
-double Temp;
+String prettyTime;
 
-void print(String s) {
-  Serial.println(s); 
-}
+double Temp;
+String prettyTemp;
+
+/************* TOOLS **************/
 
 String Double2String( double val, unsigned int precision){
 // prints val with number of decimal places determine by precision
@@ -67,7 +54,22 @@ String Double2String( double val, unsigned int precision){
     return num;
 }
 
-/***********ETHERNET FUNCTIONS******************/
+void print(String s) {
+  Serial.println(s); 
+}
+
+// adds a pin to the arduino
+// ID number, Pin number, OUTPUT/INPUT, LOW/HIGH, Device name
+void addPin(int num, int p, int type, int pos, String name){
+  pin[num] = p;
+  if(type == 0) pinMode(pin[num], OUTPUT);
+  else pinMode(pin[num], INPUT);
+  if(pos == 0) digitalWrite(pin[num], LOW);
+  else digitalWrite(pin[num], HIGH);  
+  UUID[num] = name;
+}
+
+/*************** ETHERNET FUNCTIONS ******************/
 
 // function called when Arduino needs to communicate with server
 void serverConnect() {
@@ -97,35 +99,10 @@ void readIn(String &input) {
   }
 }
 
-/***********DATABSE FUNCTIONS******************/
-
-void insertSQL(int op, int light){
-  serverConnect();
-  char sender[50];
-  if(op == 1){
-    int t = (int)(10 * Temp);
-    sprintf(sender, "1 \"%d\" \"tank1\" \"%d\"", Time, t);
-  }else if(op == 2){ 
-    char pwr;
-    if(relayPower[light] == 1){
-      pwr = 'Y';
-    }else{
-      pwr = 'N';
-    }
-    sprintf(sender, "2 \"%d\" \"%d\" \"%c\" \"tank1\"", light, Time, pwr);
-  }
-  print(sender);
-  client.println(sender);
-  serverDisconnect();
-}
-
-void setLightTimes(){
-  lightOn[0] = 1400; lightOff[0] = 2200;
-  lightOn[1] = 1430; lightOff[1] = 2230;
-}
+/******** THERMOMETER FUNCTIONS ********/
 
 //returns current temperature as a double
-double getTemperature() {
+double getTemp() {
   byte i;
   byte present = 0;
   byte type_s;
@@ -189,28 +166,61 @@ double getTemperature() {
   return fahrenheit;
 }
 
-// returns 1 if time global var is changed
-int checkTime(){  
-  DateTime now = RTC.now();  
-  int currentTime = now.hour()*100 + now.minute();
+void setTemp(){
+  Temp = getTemp();
+}
 
-  if((currentTime < 2400) && (currentTime != Time)){
-    Time = currentTime;
+int checkTemp(){
+  double t = getTemp();
+  if(Temp != t){
+    Temp = t;
+    setTempPretty(t);
+    return 1;
+  }
+  return 0;  
+}
+
+void setTempPretty(double temp){
+  int t= (int)(temp*10);
+  String temper = String(t).substring(0, 2);
+  //print(temper);
+  temper+=".";
+  temper+=String(t).substring(2, 3);
+  prettyTemp = temper; 
+}
+
+/******** TIME FUNCTIONS ********/
+int getTime(){
+  DateTime now = RTC.now();
+  int h = now.hour();
+  int m = now.minute();
+  setTimePretty(h, m);
+  return h*100 + m;
+}
+
+void setTime(){
+  Time = getTime(); 
+}
+
+void setTimePretty(int h, int m){  
+  if(h >= 13) h-= 12;
+  String hour = String(h);
+  String min = String(m);
+  //if(hour.length() == 1) hour = "0" + hour;
+  if(min.length() == 1) min = "0" + min;
+  prettyTime = hour + ":" + min;
+}
+
+int checkTime(){
+  int tempTime = getTime();
+  if (tempTime < 2500 && Time != tempTime){
+    Time = tempTime;
     return 1;
   }
   return 0;
 }
 
-String getTimeString(){
-  String t = String(Time);
-  int h = t.substring(0, 2).toInt();
-  int m = t.substring(2).toInt();
-  if(h > 12) h = h-12;
-  return String(h) + ":" + String(m);
-   
-}
-
-// returns 1 if lights have changed
+/******** LIGHT FUNCTIONS ********/
 int checkLights(){
   int lightChange = 0;
   int max = 2500;
@@ -223,7 +233,6 @@ int checkLights(){
         digitalWrite(pin[i], LOW); 
         relayPower[i] = 1; 
         lightChange = 1;
-        insertSQL(2, i);
       }
     }else{
       // should be off/ high
@@ -231,92 +240,15 @@ int checkLights(){
         digitalWrite(pin[i], HIGH); 
         relayPower[i] = 0;
         lightChange = 1;
-        insertSQL(2, i);
       }
     }
   }
   return lightChange;
 }
 
-// returns 1 if temperature has changed
-int checkTemperature(){
-  double tempTemp = getTemperature();
-  if (tempTemp != Temp){
-    Temp = tempTemp;
-    insertSQL(1, -1);
-    return 1;
-  }
-  return 0;
-}
-
-//sets up the 
-void initLCD(){
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Light 1: ");
-  lcdCursor[0] = 9;
-
-  lcd.setCursor(0,1);  
-  lcd.print("Light 2: ");
-  lcdCursor[1] = 9;
-
-  lcd.setCursor(0,2);
-  lcd.print("Temp: ");
-  lcdCursor[2] = 6;
-
-  lcdCursor[3] = 0;
-}
-
-void clearLCDLine(int x, int y){
-  lcd.setCursor(x, y);
-  for(int i = 0; i < 20-x; i++){
-    lcd.print(" ");;
-  }
-}
-
-void updateLCD(int time, int lights, int temp){
-  if(time == 1){
-    //change time on lcd
-    String t = getTimeString();
-    print("updating TIME: " + t);
-    clearLCDLine(lcdCursor[3], 3);
-    lcd.setCursor(lcdCursor[3], 3);
-    lcd.print(t);
-  }
-
-  if(lights == 1){
-    //iterate through 2 rows
-    for(int i = 0; i < 2; i++){
-      clearLCDLine(lcdCursor[i], i);
-      lcd.setCursor(lcdCursor[i], i);
-      if(relayPower[i] == 1){
-        lcd.print("ON");
-        print("updating LIGHT " + String(i) + " ON");
-      }else{
-        lcd.print("OFF");
-        print("updating LIGHT " + String(i) + " OFF");
-      }
-    }
-  }
-
-  if(temp == 1){
-    print("updating TEMP: " + Double2String(Temp, 10));
-    //change temp on lcd
-    clearLCDLine(lcdCursor[2], 2);
-    lcd.setCursor(lcdCursor[2], 2);
-    lcd.print(Double2String(Temp, 10));
-  }
-}
-
-// adds a pin to the arduino
-// ID number, Pin number, OUTPUT/INPUT, LOW/HIGH, Device name
-void addPin(int num, int p, int type, int pos, String name){
-  pin[num] = p;
-  if(type == 0) pinMode(pin[num], OUTPUT);
-  else pinMode(pin[num], INPUT);
-  if(pos == 0) digitalWrite(pin[num], LOW);
-  else digitalWrite(pin[num], HIGH);  
-  UUID[num] = name;
+void setLightTimes(){
+  lightOn[0] = 0004; lightOff[0] = 2200;
+  lightOn[1] = 1430; lightOff[1] = 2230;
 }
 
 void setup(){
@@ -343,29 +275,146 @@ void setup(){
   initLCD();
   Wire.begin();
   RTC.begin();
-
+  Time = -1;
+  Temp = -1;
   //initialize ethernet connection
   if (Ethernet.begin(mac) == 0) {
     print("Failed to configure Ethernet using DHCP");
     Ethernet.begin(mac, ip);
   }
+}
 
-  Time = -1;
-  Temp = -1;
+/******** LCD FUNCTIONS ********/
+
+void initLCD(){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Light 1: ");
+  lcdCursor[0] = 9;
+
+  lcd.setCursor(0,1);  
+  lcd.print("Light 2: ");
+  lcdCursor[1] = 9;
+
+  lcd.setCursor(0,2);
+  lcd.print("Temp: ");
+  lcdCursor[2] = 6;
+
+  lcdCursor[3] = 0;
+}
+
+void updateLCD(int time, int lights, int temp){
+  if(time == 1){
+    //change time on lcd
+    print("updating TIME: " + prettyTime);
+    clearLCDLine(lcdCursor[3], 3);
+    lcd.setCursor(lcdCursor[3], 3);
+    lcd.print(prettyTime);
+  }
+
+  if(lights == 1){
+    //iterate through 2 rows
+    for(int i = 0; i < 2; i++){
+      clearLCDLine(lcdCursor[i], i);
+      lcd.setCursor(lcdCursor[i], i);
+      if(relayPower[i] == 1){
+        lcd.print("ON");
+        print("updating LIGHT " + String(i) + " ON");
+      }else{
+        lcd.print("OFF");
+        print("updating LIGHT " + String(i) + " OFF");
+      }
+    }
+  }
+
+  if(temp == 1){
+    print("updating TEMP: " + prettyTemp);
+    //change temp on lcd
+    clearLCDLine(lcdCursor[2], 2);
+    lcd.setCursor(lcdCursor[2], 2);
+    lcd.print(prettyTemp);
+  }
+}
+
+void clearLCDLine(int x, int y){
+  lcd.setCursor(x, y);
+  for(int i = 0; i < 20-x; i++){
+    lcd.print(" ");
+  }
+}
+
+/**************************************************/
+
+void uniReq(){
+  char out[50];
+  String data;
+  
+  print(String(Time));
+  print(Double2String(Temp, 10));
+
+  inputRequest(1, 0, -1);
+  inputRequest(0, 1, 0);
+  inputRequest(0, 1, 1);
+  //inputRequest();
+  
+  print("uni complete.");
+}
+
+void inputRequest(int temp, int lights, int light){
+  char cmd[50];
+  if(temp == 1){
+    sprintf(cmd, "1 \"%d\" \"tank1\" \"%d\"", Time, ((int)(Temp*10)));  
+  }else if(lights == 1){
+    
+    char pwr;
+    if(relayPower[light] == 1){
+      pwr = 'Y';
+    }else{
+      pwr = 'N';
+    }
+    
+    sprintf(cmd, "2 \"%d\" \"%c\" \"tank1\" \"riley\" \"%d\"", light, pwr, Time);
+  }else{
+    sprintf(cmd, "%d", -1); 
+  }
+  client.print(cmd);
+  String data;
+  readIn(data);
+}
+
+void dataSend(int temp, int lights){
+  serverConnect();
+  String data;
+  
+  readIn(data); //receive hello
+  print(data);
+  data = "";
+  client.print("A"); //send identifier
+  
+  readIn(data);
+  if(data == "2"){
+    uniReq();
+  }else if(data == "1"){
+    if(temp == 1) inputRequest(1, 0, -1);
+    if(lights == 1){
+      inputRequest(0, 1, 0);
+      inputRequest(0, 1, 1);
+    } else inputRequest(0, 0, -1);
+  }   
+    
+  client.print("1"); 
+  serverDisconnect();
 }
 
 void loop(){
-  /* GET INFORMATION */
-  int newTime = checkTime();
-  int newLights = checkLights();
-  int newTemp = checkTemperature();
+  int time = checkTime();
+  int temp = checkTemp();
+  int lights = checkLights();
   
-  /* CHECK TO UPDATE LCD */
-  if ((newTime + newLights + newTemp) > 0){
-    updateLCD(newTime, newLights, newTemp);
-  }
-  /*
-  - insert temp
-  - insert time
-  */
+  if((time + temp + lights)> 0)
+    updateLCD(time, lights, temp);
+    
+  
+  dataSend(temp, lights);
+  delay(2000);
 }
