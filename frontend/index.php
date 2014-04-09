@@ -41,7 +41,7 @@
           method=\"post\">
           <input type=\"image\" 
           src=\"" . $row['img_path'] . "\"\;
-          width=\"20%\"
+          echo width = \"35%\"
           />
           <input type=\"hidden\" name=\"owner\" value=\"" . $row['owner'] . "\">
           <input type=\"hidden\" name=\"aquarium_name\" value=\"" . $row['aquarium_name'] . "\">

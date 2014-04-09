@@ -1,6 +1,20 @@
 <html>
   <body>
     <?php
+        class Timer {
+            private $time = null;
+            public function __construct() {
+                $this->time = time();
+                echo 'Working - please wait..<br/>';
+            }
+
+            public function __destruct() {
+                echo '<br/>Job finished in '.(time()-$this->time).' seconds.';
+            }
+        }
+
+
+$t = new Timer(); // echoes "Working, please wait.."
       
       error_reporting(E_ALL);
       echo "opening socket.<br>";
@@ -26,7 +40,7 @@
       } else {
         echo "socket_recv() failed; reason: " . socket_strerror(socket_last_error($socket)) . "\n";
       }
-      echo $buf;
+      echo $buf . "<br>";
 
 
       $out = "4";
@@ -38,10 +52,12 @@
         } else {
         echo "socket_recv() failed; reason: " . socket_strerror(socket_last_error($socket)) . "\n";
       }
-      echo $buf;
+      echo $buf . "<br>";
 
       fclose($socket);      
       echo "socket closed.<br>";
+      unset($t);  // echoes "Job finished in n seconds." n = seconds elapsed
+
     ?>
   </body>
 </html>

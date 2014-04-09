@@ -76,11 +76,11 @@ def sendSQL(data):
 	# light_number, date, time, power
 	elif data[0] == "2":
 		id = 9
-		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ", " + data[4] + ", " + data[5] + ", " + str(id) + ")"
+		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ", " + data[4] + ", " + str(id) + ", " + data[5] +")"
 		print(cmd)
 	elif data[0] == "3":
 		id = 0
-		img_path = "/var/www/images/" + data[2][1:len(data[2])-1] + "/" + data[1][1:len(data[1])-1] + "/test.jpg"
+		img_path = "/var/www/images/" + data[2][1:len(data[2])-1] + "/" + data[1][1:len(data[1])-1] + "/test.jpeg"
 		
 		#needs to call three times to get current photo.
 		#not sure why. must have a buffer.
@@ -89,7 +89,7 @@ def sendSQL(data):
 		img = cam.get_image()
 		pygame.image.save(img, img_path)
 		pygame.camera.quit()
-		cmd = "insert into img_history values (" + str(id) + ", \"" + img_path + "\", " + data[1]+", " + data[2] + ", curdate(), " + data[3] + ")";
+		cmd = "insert into img_history values (" + str(id) + ", \"" + img_path[8:] + "\", " + data[1]+", " + data[2] + ", curdate(), " + data[3] + ")";
 		print(cmd)
 	else:
 		print(data)
@@ -113,11 +113,12 @@ def arduino(clientSock):
 		light1Req = clientSock.recv(512)
 		clientSock.send("1")
 		light2Req = clientSock.recv(512)
-
-		sendSQL(tempReq.split())
+		tempReq = tempReq.split()
+		sendSQL(tempReq)
+		print(tempReq)
 		sendSQL(light1Req.split())
 		sendSQL(light2Req.split())
-		sendSQL(("3 \"tank1\" \"riley\" \"1240\"").split())
+		sendSQL(("3 \"tank1\" \"riley\" " + tempReq[1]).split())
 
 		clientSock.send("1")
 		close = clientSock.recv(512)
@@ -157,6 +158,7 @@ def runServer():
 		clientSock, ad = serverSocket.accept()
 		ip = ad
 		report ("connection made")
+		#clientSock.settimeout(8.0)
 		clientHandler(clientSock)
 		#thread.start_new_thread(clientHandler, (clientSock,))
 	
