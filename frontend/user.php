@@ -12,9 +12,9 @@
           echo "Failed to connect to MySQL: " . mysqli_connect_error();
         }
 
-        $index_q = mysqli_query($database, "select img_path from img_history where aquarium_name = \"" . $_POST['aquarium_name'] . "\" and ID !=-1 order by date DESC, time DESC");
+        $index_q = mysqli_query($database, "select img_path from img_history where aquarium_name = \"" . $_POST['aquarium_name'] . "\" and ID !=-1 order by ID DESC");
         $row = mysqli_fetch_array($index_q);
-        echo "<img border=\"0\" src=\"" . $row['img_path'] . "\" alt=\"Aquarium\" width = \"50%\" >";
+        echo "<img border=\"0\" src=\"" . $row['img_path'] . "\" alt=\"No Image Yet...\" width = \"50%\" >";
         echo"<br><br>";
 
         $index_q = mysqli_query($database, "select time, date, temperature from temp_history where aquarium_name = \"" . $_POST['aquarium_name'] . "\" order by date DESC, time DESC");
@@ -69,6 +69,12 @@
       <input 
         type = "button" 
         value = "Get Current Data"
+        onClick = "window.location.href='./getPic.php'"
+      >
+
+      <input 
+        type = "button" 
+        value = "View Saved Images"
         onClick = "window.location.href='./getPic.php'"
       >
     </form>

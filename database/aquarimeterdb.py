@@ -15,6 +15,8 @@ user = 'root'
 password = 'cuse1234'
 database_name = 'aquarameter'
 
+serverip = 5677
+
 #global camera object. starts as None
 cam = None
 
@@ -77,8 +79,13 @@ def sendSQL(data):
 		cmd = "insert into light_history values (" + data[1] + ",  curdate(), " + data[2]+", " + data[3] + ", " + data[4] + ", " + str(id) + ", " + data[5] +")"
 		print(cmd)
 	elif data[0] == "3":
-		id = 0
-		img_path = "/var/www/images/" + data[2][1:len(data[2])-1] + "/" + data[1][1:len(data[1])-1] + "/test.jpeg"
+		cursor = getCursor()
+		cursor.execute("SELECT ID FROM img_history order by ID DESC")
+		id = str(cursor.fetchall()[0])
+		id = id[1:(len(id)-3)]
+		print(id)
+		id = int(id)+1
+		img_path = "/var/www/images/" + data[2][1:len(data[2])-1] + "/" + data[1][1:len(data[1])-1] + "/" + str(id) + ".jpeg"
 		
 		#needs to call three times to get current photo.
 		#not sure why. must have a buffer.
@@ -149,24 +156,28 @@ def clientHandler(clientSock):
 # clientHandler is called, passing in the socket connected
 # to the client 
 def runServer():
-	serverSocket.bind(('', 5677))
+	global serverip
+	serverSocket.bind(('', serverip))
 	serverSocket.listen(5)
 	report("Listening for connection ...")
 	while 1:
 		clientSock, ad = serverSocket.accept()
 		ip = ad
 		report ("connection made")
-		#clientSock.settimeout(8.0)
-		clientHandler(clientSock)
-		#thread.start_new_thread(clientHandler, (clientSock,))
+		clientSock.settimeout(8.0)
+		#clientHandler(clientSock)
+		thread.start_new_thread(clientHandler, (clientSock,))
 	
 # prints the possible options and runs what the user selects
 # can also pass in an argument to skip the foreplay 	
 def menu():
+	global serverip
 	cameraInit()
 	arduinoUpdateBit = 0
 	if len(sys.argv) > 1:
 		command = sys.argv[1]
+		if len(sys.argv) > 2:
+			serverip = int(sys.argv[2])
 	else:
 		report("what would you like to do?")
 		report("1: run server")
