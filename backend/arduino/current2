@@ -247,7 +247,7 @@ int checkLights(){
 }
 
 void setLightTimes(){
-  lightOn[0] = 0004; lightOff[0] = 2200;
+  lightOn[0] = 1400; lightOff[0] = 2200;
   lightOn[1] = 1430; lightOff[1] = 2230;
 }
 
