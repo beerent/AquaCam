@@ -14,7 +14,7 @@
 
         $index_q = mysqli_query($database, "select img_path from img_history where aquarium_name = \"" . $_POST['aquarium_name'] . "\" and ID !=-1 order by date DESC, time DESC");
         $row = mysqli_fetch_array($index_q);
-        echo "<img border=\"0\" src=\"" . $row['img_path'] . "\" alt=\"Pulpit rock\" width=\"304\" height=\"228\">";
+        echo "<img border=\"0\" src=\"" . $row['img_path'] . "\" alt=\"Aquarium\" width = \"50%\" >";
         echo"<br><br>";
 
         $index_q = mysqli_query($database, "select time, date, temperature from temp_history where aquarium_name = \"" . $_POST['aquarium_name'] . "\" order by date DESC, time DESC");

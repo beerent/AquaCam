@@ -64,8 +64,6 @@ def execute(sqlCommand):
 #depending on the desired operation, the strings in the
 #array are plugged in accordingly.
 def sendSQL(data):
-	print("receivedd: ")
-
 	global count
 	cmd = 'null'
 
