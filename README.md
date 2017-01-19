@@ -24,3 +24,10 @@ Features:
 - Store Data On Database
 - Store Photos On Database
 - Website To View Photo's/ Data Recordings From Server
+
+
+----------------------------
+Resolution of this project
+----------------------------
+
+This project has finished. I didn't finish everthing that I wanted to do - I am sure you've been there before with your own projects. I demo'd it to my CS department/ board of advisors and they got a kick out of it. 
